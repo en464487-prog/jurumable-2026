@@ -3,131 +3,495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>주루마블 - 컨트롤러</title>
+    <title>JURUMABLE PLAYER</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <style>
-        :root { --bg-color: #1a1c20; --card-bg: #2d3139; --point-color: #4cd964; --danger-color: #ff3b30; }
-        body { background-color: var(--bg-color); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; text-align: center; margin: 0; padding: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        /* === [Design System: Dark & Neon] === */
+        :root { 
+            --bg: #121212; 
+            --card: #1e1e1e; 
+            --point: #4cd964; /* Neon Green */
+            --danger: #ff3b30; /* Neon Red */
+            --gold: #ffd700;   /* Gold */
+            --destiny: #bf5af2; /* Purple for Destiny */
+            --text: #ffffff;
+        }
         
-        /* UI 컴포넌트 */
-        .box { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        h2 { margin: 0 0 15px 0; font-size: 22px; font-weight: 700; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 20px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
         
-        input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: white; font-size: 20px; text-align: center; padding: 10px 0; outline: none; box-sizing: border-box; }
-        input:focus { border-bottom-color: var(--point-color); }
-
-        /* 학번 태그 버튼 */
-        .tag-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 25px; }
-        .tag { background: #3d424d; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; border: 1px solid transparent; transition: 0.2s; color: #ccc; }
-        .tag.active { border-color: var(--point-color); background: rgba(76, 217, 100, 0.1); color: var(--point-color); font-weight: bold; }
-
-        /* 캐릭터 그리드 (이모티콘) */
-        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .char-item { background: var(--card-bg); padding: 15px 10px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; position: relative; }
-        .char-item .emoji { font-size: 36px; display: block; margin-bottom: 5px; filter: grayscale(100%); opacity: 0.7; transition: 0.2s; }
-        .char-item .name { font-size: 13px; color: #888; }
+        /* 유틸리티 */
+        .hidden { display: none !important; }
+        .box { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h2 { margin: 0 0 15px 0; font-size: 20px; font-weight: 700; color: var(--point); text-shadow: 0 0 10px rgba(76, 217, 100, 0.3); }
         
-        /* 선택 활성화 효과 */
-        .char-item.active { border-color: var(--point-color); background: rgba(76, 217, 100, 0.05); transform: translateY(-3px); }
-        .char-item.active .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.1); }
-        .char-item.active .name { color: white; font-weight: bold; }
+        /* 입력 폼 */
+        input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: white; font-size: 20px; text-align: center; padding: 10px; outline: none; transition: 0.3s; }
+        input:focus { border-bottom-color: var(--point); }
 
-        /* 시작 버튼 */
-        .btn-start { background: var(--point-color); color: #1a1c20; padding: 18px; width: 100%; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; margin-top: 30px; box-shadow: 0 0 20px rgba(76, 217, 100, 0.4); cursor: pointer; transition: 0.2s; }
-        .btn-start:active { transform: scale(0.98); opacity: 0.8; }
+        /* 캐릭터 그리드 */
+        .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .char-item { background: #2a2a2a; padding: 10px; border-radius: 12px; font-size: 30px; filter: grayscale(1); transition: 0.2s; border: 2px solid transparent; cursor: pointer; }
+        .char-item.active { filter: grayscale(0); border-color: var(--point); background: rgba(76, 217, 100, 0.1); transform: scale(1.1); box-shadow: 0 0 15px rgba(76, 217, 100, 0.4); }
 
-        /* 🍺 비밀 주량 카운터 (좌측 하단) */
-        .secret-counter { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 20px; font-size: 14px; display: flex; align-items: center; gap: 5px; border: 1px solid #444; }
-        .secret-counter span { color: #ffd700; font-weight: bold; }
+        /* 버튼 스타일 */
+        .btn { background: var(--point); color: #000; width: 100%; padding: 18px; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; margin-top: 15px; cursor: pointer; box-shadow: 0 0 20px rgba(76, 217, 100, 0.4); transition: 0.2s; }
+        .btn:active { transform: scale(0.95); opacity: 0.9; }
+        .btn.danger { background: var(--danger); box-shadow: 0 0 20px rgba(255, 59, 48, 0.4); color: white; }
+        .btn.gold { background: var(--gold); box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
 
+        /* 태그 선택 */
+        .tag-container { display: flex; gap: 8px; justify-content: center; margin-top: 15px; }
+        .tag { padding: 8px 16px; background: #333; border-radius: 20px; font-size: 13px; color: #aaa; border: 1px solid transparent; }
+        .tag.active { border-color: var(--point); color: var(--point); background: rgba(76, 217, 100, 0.1); }
+
+        /* === [Game UI] === */
+        /* 상단 상태바 (마스터키/운명) */
+        #status-bar { display: flex; flex-direction: column; gap: 5px; align-items: center; margin-bottom: 20px; }
+        .badge { font-size: 13px; padding: 5px 12px; border-radius: 20px; font-weight: bold; animation: popIn 0.3s; display: none; }
+        .badge.master { background: var(--gold); color: black; box-shadow: 0 0 10px var(--gold); }
+        .badge.destiny { background: var(--destiny); color: white; box-shadow: 0 0 10px var(--destiny); }
+        .badge.spy { background: orange; color: black; border: 1px solid white; }
+
+        /* 메인 액션 버튼 (맥동 효과) */
+        #action-container { min-height: 80px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
+        .pulse-btn { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(76, 217, 100, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(76, 217, 100, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 217, 100, 0); } }
+
+        /* 하단 고정바 (주량 & 인벤토리) */
+        .bottom-bar { position: fixed; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; pointer-events: none; }
+        .drink-counter { background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 30px; border: 1px solid #555; font-weight: bold; font-size: 15px; color: var(--point); }
+        .inventory-btn { pointer-events: auto; background: var(--card); width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); position: relative; }
+        .inv-badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* 스파이 의심 버튼 (우측 상단 작게) */
+        .spy-vote-trigger { position: absolute; top: 15px; right: 15px; background: #333; color: #888; border: 1px solid #555; padding: 5px 10px; border-radius: 8px; font-size: 11px; }
+
+        /* === [Modals & Overlays] === */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px); }
+        
+        /* 경고 모달 */
+        .modal.danger-mode { background: rgba(40, 0, 0, 0.95); border: 4px solid var(--danger); }
+        .alert-icon { font-size: 80px; margin-bottom: 20px; animation: shake 0.5s infinite; }
+        .alert-title { font-size: 32px; color: var(--danger); font-weight: 900; margin-bottom: 10px; text-transform: uppercase; }
+        .alert-desc { color: #fff; font-size: 18px; line-height: 1.5; }
+
+        /* 리스트 선택 모달 */
+        #select-list, #inv-list { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 60vh; overflow-y: auto; }
+        .select-item { background: #333; padding: 15px; border-radius: 10px; border: 1px solid #444; color: white; font-weight: bold; }
+        .select-item:active { background: var(--point); color: black; }
+        
+        /* 인벤토리 아이템 */
+        .inv-item { background: #2a2a2a; border: 1px solid var(--gold); padding: 15px; border-radius: 10px; text-align: center; }
+        .inv-item h4 { margin: 0 0 5px 0; color: var(--gold); }
+        .inv-item button { width: 100%; padding: 8px; margin-top: 5px; background: #444; border: none; color: white; border-radius: 5px; }
+
+        /* 룰 입력창 */
+        textarea { width: 100%; height: 120px; background: #222; border: 1px solid #555; color: white; padding: 15px; font-size: 16px; border-radius: 10px; margin: 20px 0; box-sizing: border-box; resize: none; }
+
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, -2px); } }
     </style>
 </head>
 <body>
-    <div style="margin-bottom: 30px;">
-        <h2 style="color:var(--point-color);">JURUMABLE</h2>
-        <p style="color:#777; font-size:14px; margin:0;">입장 정보를 입력해주세요</p>
+    <audio id="snd-turn" src="turn_alert.mp3"></audio>
+    <audio id="snd-alert" src="sniper.mp3"></audio>
+    <audio id="snd-bomb" src="bomb_tick.mp3" loop></audio>
+
+    <div id="login-ui">
+        <div style="margin-bottom: 30px;">
+            <h1 style="color:white; font-size: 24px; margin:0;">JURUMABLE</h1>
+            <p style="color:var(--point); font-size:12px; margin-top:5px; letter-spacing: 2px;">PLAYER CONTROLLER</p>
+        </div>
+
+        <div class="box">
+            <input type="text" id="userName" placeholder="닉네임 (5자 이내)" maxlength="5">
+            <div class="tag-container" id="tag-list">
+                <div class="tag" onclick="selectTag(this, '21')">21학번</div>
+                <div class="tag" onclick="selectTag(this, '23')">23학번</div>
+                <div class="tag" onclick="selectTag(this, 'Guest')">게스트</div>
+            </div>
+        </div>
+
+        <p style="color:#777; font-size:12px;">캐릭터 선택</p>
+        <div class="char-grid" id="char-grid"></div>
+        <button class="btn" onclick="enterGame()">입장하기</button>
     </div>
 
-    <div class="box">
-        <input type="text" id="userName" placeholder="이름 (최대 5글자)" maxlength="5">
-        <div class="tag-row" style="margin-top:15px; margin-bottom:0;">
-            <div class="tag" onclick="selectTag(this, '21')">21학번</div>
-            <div class="tag" onclick="selectTag(this, '23')">23학번</div>
-            <div class="tag" onclick="selectTag(this, 'guest')">게스트</div>
+    <div id="game-ui" class="hidden">
+        <button class="spy-vote-trigger" onclick="openVote()">⚠️ 의심 투표</button>
+        
+        <div id="status-bar">
+            <div id="badge-master" class="badge master">👑 마스터 키 활성화 (1턴)</div>
+            <div id="badge-destiny" class="badge destiny">🔗 운명 공동체 (3턴)</div>
+            <div id="badge-spy" class="badge spy"></div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <div id="my-char-display" style="font-size: 50px; margin-bottom: 10px;">😀</div>
+            <h2 id="my-name-display" style="color:white; margin:0;">플레이어</h2>
+            <p id="game-msg" style="color:#888; font-size:14px; margin-top:5px;">대기 중...</p>
+        </div>
+
+        <div id="action-container"></div>
+
+        <div class="bottom-bar">
+            <div class="drink-counter">🍺 <span id="drink-count">0</span>잔 (Auto)</div>
+            <div class="inventory-btn" onclick="openInventory()">
+                🎒
+                <div id="inv-count" class="inv-badge hidden">0</div>
+            </div>
         </div>
     </div>
 
-    <h3 style="text-align:left; font-size:16px; margin-bottom:10px; color:#ddd;">내 캐릭터 선택</h3>
-    <div class="char-grid" id="charGrid">
-        </div>
+    <div id="alert-modal" class="modal danger-mode" onclick="closeModal('alert-modal')">
+        <div class="alert-icon" id="alert-emoji">⚠️</div>
+        <div class="alert-title" id="alert-title">경고</div>
+        <div class="alert-desc" id="alert-desc">내용</div>
+    </div>
 
-    <button class="btn-start" onclick="tryStartGame()">입장하기</button>
+    <div id="inv-modal" class="modal">
+        <h2 style="color:var(--gold)">🎒 내 가방</h2>
+        <div id="inv-list"></div>
+        <button class="btn" style="background:#444; margin-top:20px;" onclick="closeModal('inv-modal')">닫기</button>
+    </div>
 
-    <div class="secret-counter">
-        🍺 <span id="myDrinkCount">0</span>잔
+    <div id="select-modal" class="modal">
+        <h2 id="select-title" style="color:white">대상 선택</h2>
+        <div id="select-list"></div>
+        <button class="btn" style="background:#444; margin-top:20px;" onclick="closeModal('select-modal')">취소</button>
+    </div>
+
+    <div id="input-modal" class="modal">
+        <h2 style="color:var(--gold)">📜 법의 지배자</h2>
+        <p style="color:#ccc; font-size:14px;">새로운 규칙을 선포하세요.</p>
+        <textarea id="rule-text" placeholder="예: 지금부터 웃으면 1잔"></textarea>
+        <button class="btn" onclick="submitRule()">TV 송출하기</button>
     </div>
 
     <script src="game_config.js"></script>
     <script>
-        let selectedChar = null;
-        let selectedTag = null;
+        // === [1] 초기 설정 ===
+        let db, myId, myChar, myTag, myName;
+        let myInventory = []; 
+        let currentMode = null; // 'vote', 'sniper', 'knight'
+        let lastDestiny = null; // 운명공동체 중복 알림 방지
 
-        // 1. 설정 파일에서 캐릭터 불러오기
-        const grid = document.getElementById('charGrid');
-        if (typeof GAME_CONFIG !== 'undefined') {
-            GAME_CONFIG.characters.forEach(char => {
-                const div = document.createElement('div');
-                div.className = 'char-item';
-                div.onclick = () => selectChar(div, char.id);
-                div.innerHTML = `<span class="emoji">${char.emoji}</span><span class="name">${char.name}</span>`;
-                grid.appendChild(div);
+        // 캐릭터 로드
+        window.onload = () => {
+            const grid = document.getElementById('char-grid');
+            GAME_CONFIG.characters.forEach(c => {
+                let d = document.createElement('div');
+                d.className = 'char-item';
+                d.innerText = c.emoji;
+                d.onclick = () => {
+                    document.querySelectorAll('.char-item').forEach(e => e.classList.remove('active'));
+                    d.classList.add('active');
+                    myChar = c.id;
+                    navigator.vibrate?.(10);
+                };
+                grid.appendChild(d);
             });
-        } else {
-            alert("설정 파일(game_config.js)을 찾을 수 없습니다!");
-        }
+        };
 
-        // 2. 학번 선택 로직
         function selectTag(el, val) {
+            myTag = val;
             document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
-            selectedTag = val;
-            triggerHaptic(); // 진동 효과
         }
 
-        // 3. 캐릭터 선택 로직
-        function selectChar(el, charId) {
-            document.querySelectorAll('.char-item').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            selectedChar = charId;
-            triggerHaptic(); // 진동 효과
+        // === [2] 입장 및 Firebase 연동 ===
+        function enterGame() {
+            myName = document.getElementById('userName').value;
+            if(!myName || !myChar || !myTag) return alert('모든 정보를 입력해주세요.');
+
+            // 오디오 권한 획득 (무음 재생)
+            document.getElementById('snd-turn').play().catch(()=>{});
+
+            db = firebase.database();
+            myId = Date.now().toString();
+
+            // 유저 생성
+            db.ref('users/' + myId).set({
+                name: myName,
+                tag: myTag,
+                char: myChar,
+                drinks: 0,
+                location: 0,
+                status: 'alive',
+                inventory: [] // 보관함 초기화
+            });
+
+            // 화면 전환
+            document.getElementById('login-ui').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            document.getElementById('my-name-display').innerText = myName;
+            document.getElementById('my-char-display').innerText = GAME_CONFIG.characters.find(c=>c.id===myChar).emoji;
+
+            startListening();
         }
 
-        // 4. 햅틱(진동) 효과 - 안드로이드 지원
-        function triggerHaptic() {
-            if (navigator.vibrate) navigator.vibrate(10);
+        // === [3] 실시간 리스너 (자동화의 핵심) ===
+        function startListening() {
+            db.ref('users/' + myId).on('value', snap => {
+                const val = snap.val();
+                if(!val) return;
+
+                // 1. 자동 주량 업데이트
+                document.getElementById('drink-count').innerText = val.drinks || 0;
+
+                // 2. 인벤토리 동기화 (폰에만 저장)
+                myInventory = val.inventory || [];
+                const badge = document.getElementById('inv-count');
+                if(myInventory.length > 0) {
+                    badge.innerText = myInventory.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                // 3. 마스터 키 (1턴 유지)
+                const masterBadge = document.getElementById('badge-master');
+                if(val.masterKeyActive) {
+                    masterBadge.style.display = 'block';
+                } else {
+                    masterBadge.style.display = 'none';
+                }
+
+                // 4. 운명 공동체 (3턴 유지 & 알림)
+                const destinyBadge = document.getElementById('badge-destiny');
+                if(val.destiny && val.destiny.turns > 0) {
+                    destinyBadge.style.display = 'block';
+                    destinyBadge.innerText = `🔗 ${val.destiny.partner}님과 공동체 (${val.destiny.turns}턴)`;
+                    
+                    // 새로운 운명이면 알림
+                    if(lastDestiny !== val.destiny.partner) {
+                        showAlert('🔗', '운명 공동체 결성!', `${val.destiny.partner}님과 운명을 함께합니다.\n(3턴간 지속)`, true);
+                        lastDestiny = val.destiny.partner;
+                    }
+                } else {
+                    destinyBadge.style.display = 'none';
+                    lastDestiny = null;
+                }
+
+                // 5. 스파이 미션
+                const spyBadge = document.getElementById('badge-spy');
+                if(val.spyMission) {
+                    spyBadge.style.display = 'block';
+                    spyBadge.innerText = `🕵️ 미션: ${val.spyMission}`;
+                } else {
+                    spyBadge.style.display = 'none';
+                }
+
+                // 6. 폭탄 알림
+                if(val.hasBomb) {
+                    document.body.style.border = "5px solid red";
+                    document.getElementById('snd-bomb').play();
+                    showAlert('💣', '폭탄이 왔습니다!', '누군가를 추월하거나 턴을 넘기세요!', true);
+                } else {
+                    document.body.style.border = "none";
+                    document.getElementById('snd-bomb').pause();
+                }
+
+                // 7. 메인 액션 버튼 관리 (주사위 / 돌리기)
+                const container = document.getElementById('action-container');
+                container.innerHTML = ''; // 초기화
+
+                if(val.isMyTurn) {
+                    const btn = createActionBtn('🎲 주사위 굴리기', 'btn pulse-btn', () => {
+                        const num = Math.floor(Math.random() * 6) + 1;
+                        db.ref('game/dice').set({ playerId: myId, num: num, time: Date.now() });
+                        db.ref(`users/${myId}/isMyTurn`).set(false);
+                    });
+                    container.appendChild(btn);
+                    playSound('turn');
+                    navigator.vibrate?.([200, 100, 200]);
+                    document.getElementById('game-msg').innerText = "내 차례입니다!";
+                }
+                else if(val.actionRequired === 'spin') {
+                    const btn = createActionBtn('🎰 돌리기', 'btn gold pulse-btn', () => {
+                        db.ref('game/event').set({ type: 'spin_trigger', playerId: myId, time: Date.now() });
+                        db.ref(`users/${myId}/actionRequired`).set(null);
+                    });
+                    container.appendChild(btn);
+                    document.getElementById('game-msg').innerText = "결과를 확인하세요!";
+                    navigator.vibrate?.(100);
+                } else {
+                    document.getElementById('game-msg').innerText = "대기 중...";
+                }
+
+                // 8. 요청 처리 (입력/지목) - 마스터키 등
+                if(val.requestInput) {
+                    if(val.requestInput.type === 'rule') {
+                        document.getElementById('input-modal').style.display = 'flex';
+                    }
+                    if(val.requestInput.type === 'select') {
+                        currentMode = val.requestInput.mode; // 'sniper', 'knight'
+                        openPlayerSelect(val.requestInput.title || '대상 선택');
+                    }
+                }
+                
+                // 9. 전역 경고 (Host가 보낸 긴급 알림)
+                if(val.alertMsg) {
+                    showAlert(val.alertEmoji, val.alertTitle, val.alertMsg, true);
+                    db.ref(`users/${myId}/alertMsg`).set(null); // 확인 후 삭제
+                }
+            });
         }
 
-        // 5. 입장하기 버튼 클릭
-        function tryStartGame() {
-            const name = document.getElementById('userName').value.trim();
-            if (!name) return alert("이름을 입력해주세요!");
-            if (!selectedTag) return alert("학번을 선택해주세요!");
-            if (!selectedChar) return alert("캐릭터를 선택해주세요!");
+        // === [4] 액션 함수들 ===
 
-            // 여기서 나중에 파이어베이스로 데이터를 쏘게 됩니다.
-            alert(`환영합니다 ${name}님!\n[${selectedChar}] 캐릭터로 대기합니다.`);
+        // 인벤토리 열기
+        function openInventory() {
+            const list = document.getElementById('inv-list');
+            list.innerHTML = '';
             
-            // 알림 권한 요청 (아이폰용 사운드 언락)
-            unlockAudio();
+            if(myInventory.length === 0) {
+                list.innerHTML = '<p style="grid-column: span 2; color:#777;">보관함이 비었습니다.</p>';
+            } else {
+                myInventory.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    div.innerHTML = `
+                        <h4>${item.name}</h4>
+                        <p style="font-size:12px; color:#aaa; margin-bottom:5px;">${item.desc}</p>
+                    `;
+                    const useBtn = document.createElement('button');
+                    useBtn.innerText = "지금 사용";
+                    useBtn.onclick = () => useItem(item, idx);
+                    div.appendChild(useBtn);
+                    list.appendChild(div);
+                });
+            }
+            document.getElementById('inv-modal').style.display = 'flex';
         }
 
-        // 6. 사운드 언락 (모바일 브라우저 정책 대응)
-        function unlockAudio() {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                ctx.resume();
+        // 아이템 사용 로직
+        function useItem(item, idx) {
+            // 1. 타겟 지정이 필요한 아이템인지 확인
+            if(item.type === 'sniper' || item.type === 'attack') {
+                currentMode = 'item_use'; // 모드 설정
+                // 임시 저장을 위해 전역 변수 활용 가능
+                window.selectedItemIdx = idx;
+                window.selectedItem = item;
+                closeModal('inv-modal');
+                openPlayerSelect(`${item.name} 사용 대상`);
+            } else {
+                // 2. 즉시 사용 (방어권 등) -> Host로 전송 (TV 연출)
+                db.ref('game/event').set({
+                    type: 'item_used',
+                    playerId: myId,
+                    itemName: item.name,
+                    itemEffect: item.effect,
+                    time: Date.now()
+                });
+                // 인벤토리에서 삭제
+                removeItem(idx);
+                closeModal('inv-modal');
             }
         }
+
+        function removeItem(idx) {
+            let newInv = [...myInventory];
+            newInv.splice(idx, 1);
+            db.ref(`users/${myId}/inventory`).set(newInv);
+        }
+
+        // 의심 투표 열기
+        function openVote() {
+            currentMode = 'vote';
+            openPlayerSelect('스파이 의심 지목');
+        }
+
+        // 플레이어 선택 리스트 생성
+        function openPlayerSelect(title) {
+            const list = document.getElementById('select-list');
+            document.getElementById('select-title').innerText = title;
+            list.innerHTML = '로딩 중...';
+            document.getElementById('select-modal').style.display = 'flex';
+
+            db.ref('users').once('value', snap => {
+                list.innerHTML = '';
+                snap.forEach(u => {
+                    if(u.key === myId) return; // 본인 제외
+                    if(u.val().status === 'dead') return; // 죽은 사람 제외
+
+                    const btn = document.createElement('div');
+                    btn.className = 'select-item';
+                    btn.innerText = u.val().name;
+                    btn.onclick = () => submitSelect(u.key, u.val().name);
+                    list.appendChild(btn);
+                });
+            });
+        }
+
+        // 선택 완료 처리
+        function submitSelect(targetId, targetName) {
+            const payload = {
+                from: myId,
+                fromName: myName,
+                targetId: targetId,
+                targetName: targetName,
+                time: Date.now()
+            };
+
+            if(currentMode === 'vote') {
+                payload.type = 'vote_cast';
+                db.ref('game/event').set(payload);
+                alert(`${targetName}님에게 투표했습니다.`);
+            } 
+            else if (currentMode === 'sniper' || currentMode === 'knight') {
+                // 마스터키/저격권 사용 -> Host가 처리
+                payload.type = currentMode + '_action';
+                db.ref('game/event').set(payload);
+                db.ref(`users/${myId}/requestInput`).set(null); // 요청 닫기
+            }
+            else if (currentMode === 'item_use') {
+                // 보관함 아이템 사용
+                payload.type = 'item_used_target';
+                payload.item = window.selectedItem;
+                db.ref('game/event').set(payload);
+                removeItem(window.selectedItemIdx);
+            }
+
+            closeModal('select-modal');
+        }
+
+        // 룰 지배자 제출
+        function submitRule() {
+            const txt = document.getElementById('rule-text').value;
+            if(!txt) return;
+            db.ref('game/rule').set({ text: txt, author: myName, time: Date.now() });
+            db.ref(`users/${myId}/requestInput`).set(null);
+            closeModal('input-modal');
+        }
+
+        // === [5] UI 유틸리티 ===
+        function createActionBtn(text, className, onClick) {
+            const b = document.createElement('button');
+            b.className = className;
+            b.innerText = text;
+            b.onclick = onClick;
+            return b;
+        }
+
+        function showAlert(emoji, title, desc, vibrate) {
+            const m = document.getElementById('alert-modal');
+            document.getElementById('alert-emoji').innerText = emoji;
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-desc').innerText = desc;
+            m.style.display = 'flex';
+            
+            if(vibrate) {
+                playSound('alert');
+                navigator.vibrate?.([500, 200, 500, 200, 500]);
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function playSound(id) { document.getElementById('snd-'+id).play().catch(()=>{}); }
+
     </script>
 </body>
 </html>
