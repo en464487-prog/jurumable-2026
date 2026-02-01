@@ -65,6 +65,21 @@
         .inventory-btn { pointer-events: auto; background: var(--card); width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); position: relative; }
         .inv-badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
+        /* [추가할 코드] 스파이 완료 버튼 스타일 */
+        #spy-btn {
+    margin-left: 8px;
+    padding: 4px 10px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: middle;
+}
+#spy-btn:active { opacity: 0.7; transform: scale(0.95); }
+
         /* 스파이 의심 버튼 (우측 상단 작게) */
         .spy-vote-trigger { position: absolute; top: 15px; right: 15px; background: #333; color: #888; border: 1px solid #555; padding: 5px 10px; border-radius: 8px; font-size: 11px; }
 
@@ -275,14 +290,18 @@
                     lastDestiny = null;
                 }
 
-                // 5. 스파이 미션
-                const spyBadge = document.getElementById('badge-spy');
-                if(val.spyMission) {
-                    spyBadge.style.display = 'block';
-                    spyBadge.innerText = `🕵️ 미션: ${val.spyMission}`;
-                } else {
-                    spyBadge.style.display = 'none';
-                }
+              // 5. 스파이 미션
+const spyBadge = document.getElementById('badge-spy');
+if(val.spyMission) {
+    spyBadge.style.display = 'block';
+    // innerText 대신 innerHTML을 써서 버튼 태그를 직접 넣어주는 거예요!
+    spyBadge.innerHTML = `
+        🕵️ 미션: ${val.spyMission} 
+        <button id="spy-btn" onclick="reportSpySuccess()">완료 보고</button>
+    `;
+} else {
+    spyBadge.style.display = 'none';
+}
 
                 // 6. 폭탄 알림
                 if(val.hasBomb) {
@@ -492,6 +511,24 @@
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function playSound(id) { document.getElementById('snd-'+id).play().catch(()=>{}); }
 
-    </script>
-</body>
+// ... 기존에 있던 다른 함수들 ...
+
+    // 여기에 붙여넣으세요!
+    function reportSpySuccess() {
+        if(!confirm("정말 미션을 완수했나요?\n확인 시 TV에 정체가 공개됩니다!")) return;
+
+        db.ref('game/event').set({
+            type: 'spy_complete',
+            playerId: myId,
+            playerName: myName,
+            time: Date.now()
+        });
+
+        const btn = document.getElementById('spy-btn');
+        if(btn) btn.style.display = 'none';
+        
+        alert("보고 완료! TV 화면을 확인하세요.");
+    }
+
+</script> </body>
 </html>
