@@ -3,130 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>주루마블 - 컨트롤러</title>
+    <title>주루마블 컨트롤러</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg-color: #1a1c20; --card-bg: #2d3139; --point-color: #4cd964; --danger-color: #ff3b30; }
-        body { background-color: var(--bg-color); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; text-align: center; margin: 0; padding: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        :root { --bg: #1a1c20; --card: #2d3139; --point: #4cd964; --danger: #ff3b30; }
+        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; padding: 20px; user-select: none; }
+        .box { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: white; font-size: 20px; text-align: center; padding: 10px; }
         
-        /* UI 컴포넌트 */
-        .box { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        h2 { margin: 0 0 15px 0; font-size: 22px; font-weight: 700; }
+        .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .char-item { font-size: 30px; padding: 10px; background: #333; border-radius: 10px; filter: grayscale(1); }
+        .char-item.active { filter: grayscale(0); border: 2px solid var(--point); transform: scale(1.1); }
         
-        input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: white; font-size: 20px; text-align: center; padding: 10px 0; outline: none; box-sizing: border-box; }
-        input:focus { border-bottom-color: var(--point-color); }
-
-        /* 학번 태그 버튼 */
-        .tag-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 25px; }
-        .tag { background: #3d424d; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; border: 1px solid transparent; transition: 0.2s; color: #ccc; }
-        .tag.active { border-color: var(--point-color); background: rgba(76, 217, 100, 0.1); color: var(--point-color); font-weight: bold; }
-
-        /* 캐릭터 그리드 (이모티콘) */
-        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .char-item { background: var(--card-bg); padding: 15px 10px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; position: relative; }
-        .char-item .emoji { font-size: 36px; display: block; margin-bottom: 5px; filter: grayscale(100%); opacity: 0.7; transition: 0.2s; }
-        .char-item .name { font-size: 13px; color: #888; }
+        .btn { background: var(--point); width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 15px; color: black; }
+        .btn-dice { background: white; color: black; font-size: 20px; box-shadow: 0 4px 10px rgba(255,255,255,0.2); }
+        .btn-bomb { background: var(--danger); color: white; animation: shake 0.5s infinite; display: none; }
         
-        /* 선택 활성화 효과 */
-        .char-item.active { border-color: var(--point-color); background: rgba(76, 217, 100, 0.05); transform: translateY(-3px); }
-        .char-item.active .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.1); }
-        .char-item.active .name { color: white; font-weight: bold; }
-
-        /* 시작 버튼 */
-        .btn-start { background: var(--point-color); color: #1a1c20; padding: 18px; width: 100%; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; margin-top: 30px; box-shadow: 0 0 20px rgba(76, 217, 100, 0.4); cursor: pointer; transition: 0.2s; }
-        .btn-start:active { transform: scale(0.98); opacity: 0.8; }
-
-        /* 🍺 비밀 주량 카운터 (좌측 하단) */
-        .secret-counter { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 20px; font-size: 14px; display: flex; align-items: center; gap: 5px; border: 1px solid #444; }
-        .secret-counter span { color: #ffd700; font-weight: bold; }
-
+        .drink-btn { width: 90px; height: 90px; border-radius: 50%; background: #ffd700; border: none; font-size: 20px; font-weight: bold; margin: 20px auto; display: block; box-shadow: 0 0 20px rgba(255,215,0,0.5); color: black; }
+        
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
+        
+        #gameScreen { display: none; }
+        #alertOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; }
     </style>
 </head>
 <body>
-    <div style="margin-bottom: 30px;">
-        <h2 style="color:var(--point-color);">JURUMABLE</h2>
-        <p style="color:#777; font-size:14px; margin:0;">입장 정보를 입력해주세요</p>
+    <div id="loginScreen">
+        <h2>🎲 주루마블 입장</h2>
+        <div class="box"><input type="text" id="name" placeholder="닉네임 입력 (5자 이내)" maxlength="5"></div>
+        <div class="char-grid" id="charList"></div>
+        <button class="btn" onclick="enterGame()">입장하기</button>
     </div>
 
-    <div class="box">
-        <input type="text" id="userName" placeholder="이름 (최대 5글자)" maxlength="5">
-        <div class="tag-row" style="margin-top:15px; margin-bottom:0;">
-            <div class="tag" onclick="selectTag(this, '21')">21학번</div>
-            <div class="tag" onclick="selectTag(this, '23')">23학번</div>
-            <div class="tag" onclick="selectTag(this, 'guest')">게스트</div>
+    <div id="gameScreen">
+        <h3 id="displayInfo">대기 중...</h3>
+        
+        <button class="btn btn-dice" onclick="rollDice()">🎲 주사위 굴리기</button>
+        <p id="diceResult" style="font-size: 24px; color: #ffd700; font-weight: bold; min-height: 30px;"></p>
+
+        <button id="passBombBtn" class="btn btn-bomb" onclick="passBomb()">💣 폭탄 넘기기!</button>
+
+        <div style="margin-top: 30px; padding-top:20px; border-top:1px solid #444;">
+            <p style="color:#888; font-size:12px;">마신 잔 수 (나만 보임)</p>
+            <button class="drink-btn" onclick="addDrink()">🍺<br><span id="drinkCount">0</span>잔</button>
         </div>
+
+        <button class="btn" style="background:#555; color:white; margin-top:30px;" onclick="sendVote()">👉 지목 투표하기</button>
     </div>
 
-    <h3 style="text-align:left; font-size:16px; margin-bottom:10px; color:#ddd;">내 캐릭터 선택</h3>
-    <div class="char-grid" id="charGrid">
-        </div>
-
-    <button class="btn-start" onclick="tryStartGame()">입장하기</button>
-
-    <div class="secret-counter">
-        🍺 <span id="myDrinkCount">0</span>잔
+    <div id="alertOverlay" onclick="this.style.display='none'">
+        <h1 id="alertEmoji" style="font-size:80px;">⚠️</h1>
+        <h2 id="alertText" style="color:white; text-align:center; padding:20px;">알림</h2>
     </div>
 
     <script src="game_config.js"></script>
     <script>
-        let selectedChar = null;
-        let selectedTag = null;
+        let myId = Date.now().toString();
+        let myChar = null;
+        let myDrinks = 0;
+        let db;
 
-        // 1. 설정 파일에서 캐릭터 불러오기
-        const grid = document.getElementById('charGrid');
-        if (typeof GAME_CONFIG !== 'undefined') {
-            GAME_CONFIG.characters.forEach(char => {
-                const div = document.createElement('div');
-                div.className = 'char-item';
-                div.onclick = () => selectChar(div, char.id);
-                div.innerHTML = `<span class="emoji">${char.emoji}</span><span class="name">${char.name}</span>`;
-                grid.appendChild(div);
+        // 초기화
+        window.onload = function() {
+            const grid = document.getElementById('charList');
+            GAME_CONFIG.characters.forEach(c => {
+                let d = document.createElement('div');
+                d.className = 'char-item';
+                d.innerHTML = c.emoji;
+                d.onclick = () => {
+                    document.querySelectorAll('.char-item').forEach(e=>e.classList.remove('active'));
+                    d.classList.add('active');
+                    myChar = c.id;
+                };
+                grid.appendChild(d);
             });
-        } else {
-            alert("설정 파일(game_config.js)을 찾을 수 없습니다!");
         }
 
-        // 2. 학번 선택 로직
-        function selectTag(el, val) {
-            document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            selectedTag = val;
-            triggerHaptic(); // 진동 효과
-        }
-
-        // 3. 캐릭터 선택 로직
-        function selectChar(el, charId) {
-            document.querySelectorAll('.char-item').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            selectedChar = charId;
-            triggerHaptic(); // 진동 효과
-        }
-
-        // 4. 햅틱(진동) 효과 - 안드로이드 지원
-        function triggerHaptic() {
-            if (navigator.vibrate) navigator.vibrate(10);
-        }
-
-        // 5. 입장하기 버튼 클릭
-        function tryStartGame() {
-            const name = document.getElementById('userName').value.trim();
-            if (!name) return alert("이름을 입력해주세요!");
-            if (!selectedTag) return alert("학번을 선택해주세요!");
-            if (!selectedChar) return alert("캐릭터를 선택해주세요!");
-
-            // 여기서 나중에 파이어베이스로 데이터를 쏘게 됩니다.
-            alert(`환영합니다 ${name}님!\n[${selectedChar}] 캐릭터로 대기합니다.`);
+        function enterGame() {
+            const name = document.getElementById('name').value;
+            if(!name || !myChar) return alert('닉네임과 캐릭터를 선택해주세요!');
             
-            // 알림 권한 요청 (아이폰용 사운드 언락)
-            unlockAudio();
+            db = firebase.database();
+            db.ref('users/' + myId).set({
+                name: name, char: myChar, drinks: 0, 
+                status: 'normal', lastRoll: 0
+            });
+
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('displayInfo').innerText = `${GAME_CONFIG.characters.find(c=>c.id===myChar).emoji} ${name}`;
+
+            // *** 실시간 상태 감시 ***
+            db.ref('users/' + myId).on('value', snap => {
+                const data = snap.val();
+                if(!data) return;
+
+                // 폭탄 버튼 표시 여부
+                const bombBtn = document.getElementById('passBombBtn');
+                if(data.status === 'bomb') {
+                    bombBtn.style.display = 'block';
+                    showAlert('💣', '폭탄이 부착되었습니다! 빨리 넘기세요!');
+                } else {
+                    bombBtn.style.display = 'none';
+                }
+
+                if(data.status === 'spy') showAlert('🕵️', '당신은 스파이입니다. 미션을 수행하세요!');
+                if(data.status === 'master') showAlert('👑', '마스터 키 획득! 1턴간 무적입니다.');
+            });
+
+            // 전체 알림(결투 등) 감시
+            db.ref('gameEvent').on('value', snap => {
+                if(snap.val()) showAlert('📢', snap.val().message);
+            });
         }
 
-        // 6. 사운드 언락 (모바일 브라우저 정책 대응)
-        function unlockAudio() {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                ctx.resume();
-            }
+        function rollDice() {
+            const num = Math.floor(Math.random() * 6) + 1;
+            document.getElementById('diceResult').innerText = `나온 숫자: ${num}`;
+            // 서버에 알려서 TV에 띄우기
+            db.ref('diceRoll').set({ name: document.getElementById('name').value, num: num, time: Date.now() });
+        }
+
+        function addDrink() {
+            myDrinks++;
+            document.getElementById('drinkCount').innerText = myDrinks;
+            db.ref('users/' + myId + '/drinks').set(myDrinks);
+        }
+
+        function passBomb() {
+            // 폭탄 넘기기 로직 (간단하게 랜덤하게 다른 사람에게 넘김)
+            db.ref('users').once('value', snap => {
+                const users = snap.val();
+                const ids = Object.keys(users).filter(id => id !== myId);
+                if(ids.length > 0) {
+                    const targetId = ids[Math.floor(Math.random() * ids.length)];
+                    db.ref('users/' + myId + '/status').set('normal'); // 나 해제
+                    db.ref('users/' + targetId + '/status').set('bomb'); // 너 당첨
+                    alert('폭탄을 넘겼습니다!');
+                }
+            });
+        }
+
+        function sendVote() {
+            const target = prompt("누구를 지목하시겠습니까?");
+            if(target) db.ref('votes').push({target: target});
+        }
+
+        function showAlert(emoji, text) {
+            document.getElementById('alertEmoji').innerText = emoji;
+            document.getElementById('alertText').innerText = text;
+            document.getElementById('alertOverlay').style.display = 'flex';
+            if(navigator.vibrate) navigator.vibrate([500, 200, 500]);
         }
     </script>
 </body>
