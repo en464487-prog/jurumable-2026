@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>주루마블 PLAYER</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="./random.js"></script>
+    <style>
+        body { background: #2c3e50; color: white; padding: 20px; font-family: sans-serif; text-align: center; }
+        
+        /* 캐릭터 선택 그리드 */
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .char-item { border: 2px solid #555; border-radius: 10px; padding: 10px; cursor: pointer; }
+        .char-item.selected { border-color: #f1c40f; background: rgba(241, 196, 15, 0.2); }
+        .char-img { font-size: 2rem; }
+
+        /* 메인 버튼 */
+        .main-btn { width: 100%; height: 100px; font-size: 1.5rem; font-weight: bold; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
+        .btn-roll { background-color: #e74c3c; color: white; border: none; }
+        .btn-roll:disabled { background-color: #7f8c8d; }
+        
+        /* 마스터 키 패널 */
+        #master-panel { display: none; border: 2px solid gold; padding: 15px; margin-top: 20px; border-radius: 10px; background: #222; }
+        
+        /* 개인 카드 확인 모달 (NEW) */
+        #private-card-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .card-content { border: 4px solid gold; padding: 30px; border-radius: 20px; background: #222; color: gold; width: 90%; }
+
+        /* 스파이/투표 모달 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1500; justify-content: center; align-items: center; }
+        .modal-box { background: #333; padding: 20px; border-radius: 15px; width: 90%; border: 2px solid #ff8c00; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <h2 class="mb-4">🎲 입장하기</h2>
+        <input type="text" id="input-name" class="form-control mb-3" placeholder="닉네임 입력">
+        
+        <label>학번 선택</label>
+        <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-outline-light flex-fill me-1" onclick="setStd('21', this)">21학번</button>
+            <button class="btn btn-outline-light flex-fill me-1" onclick="setStd('23', this)">23학번</button>
+            <button class="btn btn-outline-light flex-fill" onclick="setStd('etc', this)">기타</button>
+        </div>
+
+        <label>캐릭터 선택</label>
+        <div class="char-grid" id="char-list"></div>
+
+        <button class="btn btn-success w-100 py-3 mt-3" onclick="joinGame()">게임 시작</button>
+    </div>
+
+    <div id="game-ui" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 id="my-info">내 정보</h5>
+            <span class="badge bg-secondary" id="turn-badge">대기중</span>
+        </div>
+
+        <h1 id="pos-name" class="my-4">START</h1>
+        
+        <button id="btn-roll" class="main-btn btn-roll" onclick="rollDice()" disabled>🎲 주사위 굴리기</button>
+        
+        <div class="card bg-dark border-secondary mb-3">
+            <div class="card-header">🎒 내 아이템</div>
+            <ul id="inventory-list" class="list-group list-group-flush text-start small"></ul>
+        </div>
+
+        <div id="master-panel">
+            <h5 class="text-warning">👑 마스터 권한</h5>
+            <p id="master-desc" class="small text-muted"></p>
+            <div id="master-actions"></div>
+        </div>
+    </div>
+
+    <div id="private-card-modal">
+        <div class="card-content">
+            <h3>🗝️ 카드 획득!</h3>
+            <h1 id="card-title" class="my-4 display-4"></h1>
+            <p id="card-desc" class="lead"></p>
+            <button class="btn btn-light w-100 mt-4" onclick="closeCardModal()">확인 (주머니에 넣기)</button>
+        </div>
+    </div>
+
+    <div id="spy-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 class="text-warning">🕵️ 스파이 지령</h3>
+            <p id="spy-mission-text" class="my-3"></p>
+            <button class="btn btn-warning w-100" onclick="document.getElementById('spy-modal').style.display='none'">확인</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://jurumable-9fdde-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let myId, myData;
+        let selectedChar = null;
+        let selectedStd = null;
+
+        // 초기화: 캐릭터 리스트 생성
+        const charList = document.getElementById('char-list');
+        characters.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'char-item';
+            div.innerHTML = `<div class="char-img">${c.img}</div><div class="small">${c.name}</div>`;
+            div.onclick = () => {
+                document.querySelectorAll('.char-item').forEach(e => e.classList.remove('selected'));
+                div.classList.add('selected');
+                selectedChar = c.id;
+            };
+            charList.appendChild(div);
+        });
+
+        function setStd(val, btn) {
+            selectedStd = val;
+            document.querySelectorAll('.btn-outline-light').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function joinGame() {
+            const name = document.getElementById('input-name').value;
+            if(!name || !selectedChar || !selectedStd) return alert("정보를 모두 입력하세요.");
+
+            myId = 'p_' + Date.now();
+            db.ref('players/' + myId).set({
+                name, char: selectedChar, std: selectedStd, position: 0, drink: 0
+            }).then(() => {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('game-ui').style.display = 'block';
+                document.getElementById('my-info').innerText = `${name} (${selectedStd}학번)`;
+                startListener();
+            });
+        }
+
+        function startListener() {
+            db.ref('players/' + myId).on('value', s => {
+                myData = s.val();
+                renderInventory();
+            });
+
+            db.ref('currentTurn').on('value', s => {
+                const turn = s.val();
+                const btn = document.getElementById('btn-roll');
+                const badge = document.getElementById('turn-badge');
+                if(turn === myId) {
+                    btn.disabled = false;
+                    btn.style.opacity = 1;
+                    badge.innerText = "내 차례!";
+                    badge.className = "badge bg-success";
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = 0.5;
+                    badge.innerText = "대기중";
+                    badge.className = "badge bg-secondary";
+                }
+            });
+
+            // 스파이 미션 리스너
+            db.ref('spyMission').on('value', s => {
+                const m = s.val();
+                if(m && m.targetId === myId && m.status === 'active') {
+                    document.getElementById('spy-modal').style.display = 'flex';
+                    document.getElementById('spy-mission-text').innerText = m.mission;
+                }
+            });
+        }
+
+        function rollDice() {
+            const dice = Math.floor(Math.random() * 6) + 1;
+            const oldPos = myData.position;
+            const newPos = (oldPos + dice) % 28;
+
+            // 1. 호스트에게 이동 알림 (폭탄 계산용)
+            db.ref('playerMoveEvent').push({ pid: myId, from: oldPos, to: newPos });
+            
+            // 2. 위치 업데이트
+            db.ref(`players/${myId}/position`).set(newPos);
+            
+            // 3. 칸 처리
+            const cell = boardData[newPos];
+            document.getElementById('pos-name').innerText = cell.name;
+            handleCell(cell);
+
+            // 4. 턴 넘기기
+            setTimeout(() => {
+                db.ref('players').once('value', s => {
+                    const keys = Object.keys(s.val());
+                    const next = keys[(keys.indexOf(myId) + 1) % keys.length];
+                    db.ref('currentTurn').set(next);
+                    db.ref('gameState/totalTurns').transaction(t => (t||0)+1);
+                });
+            }, 3000);
+        }
+
+        function handleCell(cell) {
+            if(cell.type === 'golden') {
+                const key = goldenKeys[Math.floor(Math.random() * goldenKeys.length)];
+                showCardModal(key);
+                if(key.timing === 'keep') {
+                    db.ref(`players/${myId}/inventory`).push(key);
+                } else {
+                    db.ref('tvMessage').set({ title: `🗝️ ${key.name}`, desc: `${myData.name} 사용: ${key.desc}`, type: 'gold' });
+                }
+            } else if (cell.type === 'drink') {
+                db.ref('tvMessage').set({ title: "🍺 벌칙!", desc: `${myData.name}님 ${cell.value}잔!`, type: 'drink' });
+                db.ref(`players/${myId}/drink`).transaction(v => (v||0)+cell.value);
+            }
+        }
+
+        function showCardModal(key) {
+            document.getElementById('private-card-modal').style.display = 'flex';
+            document.getElementById('card-title').innerText = key.name;
+            document.getElementById('card-desc').innerText = key.desc;
+        }
+        function closeCardModal() { document.getElementById('private-card-modal').style.display = 'none'; }
+        
+        function renderInventory() {
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = '';
+            if(myData.inventory) {
+                Object.values(myData.inventory).forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item bg-dark text-white border-secondary';
+                    li.innerText = item.name;
+                    list.appendChild(li);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
