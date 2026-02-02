@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JURUMABLE PLAYER v4</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    
+    <style>
+        /* (디자인 CSS 기존과 동일) */
+        :root { --bg: #f4f6f8; --card-bg: #ffffff; --text-main: #333333; --text-sub: #666666; --primary: #3b82f6; --danger: #ef4444; --success: #10b981; --gold: #f59e0b; --shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        body { background: var(--bg); color: var(--text-main); font-family: 'Pretendard', sans-serif; text-align: center; padding: 20px; margin: 0; user-select: none; transition: background 0.3s; }
+        body.bomb-active { background: #fef2f2; animation: pulse-bg 2s infinite; }
+        @keyframes pulse-bg { 0% { background-color: #fef2f2; } 50% { background-color: #fee2e2; } 100% { background-color: #fef2f2; } }
+        .hidden { display: none !important; }
+        .box { background: var(--card-bg); padding: 25px; border-radius: 20px; margin-bottom: 20px; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.05); }
+        input { width: 100%; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; color: var(--text-main); font-size: 1.2rem; padding: 15px; text-align: center; margin-bottom: 20px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--primary); background: #fff; }
+        .btn { background: var(--primary); color: white; width: 100%; padding: 18px; border: none; border-radius: 16px; font-size: 1.1rem; font-weight: 700; margin-top: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); } .btn.red { background: var(--danger); } .btn.gold { background: var(--gold); }
+        .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .char-item { background: #f8fafc; padding: 10px; border-radius: 12px; font-size: 2rem; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .char-item.active { background: #fff; border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .bottom-bar { position: fixed; bottom: 30px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 100; }
+        .drink-counter { pointer-events: auto; background: white; padding: 12px 24px; border-radius: 30px; color: var(--text-main); font-weight: 800; box-shadow: 0 5px 20px rgba(0,0,0,0.15); }
+        .inventory-btn { pointer-events: auto; background: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.15); cursor: pointer; }
+        .inv-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 12px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
+        #toast-alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.95); color: white; padding: 15px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; z-index: 10000; display: none; width: 85%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; backdrop-filter: blur(5px); }
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index:2000; display:none; flex-direction:column; justify-content:center; padding:20px; box-sizing:border-box; }
+        .player-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .player-btn { background: #fff; border: 2px solid #eee; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        
+        /* 라디오 버튼 (학번) */
+        .radio-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .radio-label { flex: 1; background: #f1f5f9; padding: 15px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; font-weight: bold; color: #64748b; transition: 0.2s; }
+        .radio-label.checked { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+        input[type="radio"] { display: none; }
+    </style>
+</head>
+<body>
+    <audio id="snd-turn" src="turn_alert.mp3"></audio>
+    <audio id="snd-bomb" src="bomb_tick.mp3" loop></audio>
+    <div id="toast-alert"></div>
+
+    <div id="login-ui">
+        <h1 style="color:var(--primary); font-size: 2.5rem; margin-bottom: 10px;">JURUMABLE</h1>
+        <p>깔끔해진 플레이어 컨트롤러</p>
+        <div class="box">
+            <input type="text" id="userName" placeholder="닉네임 (5자)" maxlength="5">
+            
+            <div style="text-align:left; color:var(--text-sub); font-size:0.9rem; margin-bottom:10px; font-weight:bold;">학번 선택</div>
+            <div class="radio-group">
+                <label class="radio-label checked" onclick="selectYear(this, '21')">💀 21학번<input type="radio" name="userYear" value="21" checked></label>
+                <label class="radio-label" onclick="selectYear(this, '23')">👶 23학번<input type="radio" name="userYear" value="23"></label>
+            </div>
+
+            <div class="char-grid" id="char-grid"></div>
+        </div>
+        <button class="btn" onclick="enterGame()">게임 입장</button>
+    </div>
+
+    <div id="game-ui" class="hidden">
+        <div style="text-align:right;">
+            <span id="spy-badge" style="display:none; background:var(--danger); color:white; padding:6px 12px; border-radius:20px; font-size:13px; font-weight:bold;"></span>
+        </div>
+        <div style="margin-top: 20px;">
+            <div id="my-char-display" style="font-size: 5rem; margin-bottom:10px;"></div>
+            <h2 id="my-name-display" style="font-size:1.8rem;"></h2>
+            <p id="status-msg" style="color:var(--text-sub);">대기 중...</p>
+        </div>
+        <div id="action-container" style="min-height: 120px; margin: 30px 0;"></div>
+        <div class="bottom-bar">
+            <div class="drink-counter">🍺 <span id="drink-count">0</span></div>
+            <div class="inventory-btn" onclick="openInv()">🎒<div id="inv-badge" class="inv-badge hidden">0</div></div>
+        </div>
+    </div>
+
+    <div id="inv-modal" class="modal">
+        <div class="box" style="max-height: 70vh; overflow-y: auto;">
+            <h2 style="color:var(--primary);">🎒 내 가방</h2>
+            <div id="inv-list" style="text-align: left;"></div>
+            <button class="btn" style="background:#e2e8f0; color:#333; margin-top:20px;" onclick="closeModal('inv-modal')">닫기</button>
+        </div>
+    </div>
+    <div id="target-modal" class="modal">
+        <div class="box">
+            <h2 id="target-title" style="color:var(--danger);"></h2>
+            <p>대상을 선택하세요</p>
+            <div id="player-list-area" class="player-select-grid"></div>
+            <button class="btn" style="background:#e2e8f0; color:#333; margin-top:20px;" onclick="closeModal('target-modal')">취소</button>
+        </div>
+    </div>
+    <div id="rule-modal" class="modal">
+        <div class="box">
+            <h2 style="color:var(--gold);">📜 룰 제정</h2>
+            <textarea id="rule-input" style="width:100%; height:80px; padding:10px; border-radius:10px; border:2px solid #ddd;" placeholder="새로운 규칙 입력"></textarea>
+            <button class="btn gold" onclick="submitRule()">선포하기</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyB8vzF10M-hkk1eBHSsHDHlAo36TXAJVF0", authDomain: "real-jurumable.firebaseapp.com", projectId: "real-jurumable", storageBucket: "real-jurumable.firebasestorage.app", messagingSenderId: "481733347334", appId: "1:481733347334:web:dff7506e01dc200fbe9b87" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const chars = [{id:'c1',e:'🐶'},{id:'c2',e:'🐱'},{id:'c3',e:'🐭'},{id:'c4',e:'🐹'},{id:'c5',e:'🐰'},{id:'c6',e:'🦊'},{id:'c7',e:'🐻'},{id:'c8',e:'🐼'}];
+        let myId, myName, myChar, myYear, myInventory = [];
+        let playerList = {};
+
+        window.onload = () => {
+            const g = document.getElementById('char-grid');
+            chars.forEach(c => {
+                let d = document.createElement('div'); d.className='char-item'; d.innerText=c.e;
+                d.onclick=()=>{ document.querySelectorAll('.char-item').forEach(e=>e.classList.remove('active')); d.classList.add('active'); myChar=c.id; };
+                g.appendChild(d);
+            });
+        };
+
+        function selectYear(label, val) {
+            document.querySelectorAll('.radio-label').forEach(l => l.classList.remove('checked'));
+            label.classList.add('checked');
+            label.querySelector('input').checked = true;
+        }
+
+        function enterGame() {
+            myName = document.getElementById('userName').value;
+            const yearRadios = document.getElementsByName('userYear');
+            for(let r of yearRadios) { if(r.checked) myYear = r.value; }
+            if(!myName || !myChar || !myYear) return alert('정보를 모두 입력해주세요!');
+            
+            myId = Date.now().toString();
+            db.ref(`users/${myId}`).set({ name:myName, year:myYear, char:myChar, drinks:0, location:0, inventory:[], isMyTurn:false });
+            
+            document.getElementById('login-ui').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            document.getElementById('my-name-display').innerText = `[${myYear}] ${myName}`;
+            document.getElementById('my-char-display').innerText = chars.find(c=>c.id===myChar).e;
+            listenData();
+        }
+
+        function listenData() {
+            db.ref('users').on('value', snap => { playerList = snap.val() || {}; });
+            
+            // ★ [중요] 초기화 감지 로직: 내 데이터가 사라지면 로그아웃
+            db.ref(`users/${myId}`).on('value', snap => {
+                const val = snap.val();
+                if(!val) {
+                    alert("게임이 호스트에 의해 초기화되었습니다.\n메인 화면으로 이동합니다.");
+                    location.reload(); // 새로고침
+                    return;
+                }
+
+                document.getElementById('drink-count').innerText = val.drinks || 0;
+                myInventory = val.inventory || [];
+                document.getElementById('inv-badge').innerText = myInventory.length;
+                document.getElementById('inv-badge').classList.toggle('hidden', !myInventory.length);
+
+                if(val.requestRule) document.getElementById('rule-modal').style.display = 'flex';
+                
+                const spyBadge = document.getElementById('spy-badge');
+               if(val.spyMission) {
+                    spyBadge.style.display='inline-block';
+                    // 성공 요청 버튼 추가
+                    spyBadge.innerHTML = `🕵️ ${val.spyMission} <button onclick="requestSpySuccess()" style="margin-left:5px; background:white; color:red; border:none; border-radius:5px; font-size:10px; padding:3px; cursor:pointer;">성공요청</button>`;
+                }
+                if(val.hasBomb) { document.body.classList.add('bomb-active'); document.getElementById('snd-bomb').play().catch(()=>{}); } 
+                else { document.body.classList.remove('bomb-active'); document.getElementById('snd-bomb').pause(); }
+                checkTurn();
+            });
+
+            db.ref('game/alert').on('value', snap => { if(snap.val()) showToast(snap.val()); });
+            db.ref('game/status').on('value', snap => { 
+                const st = snap.val(); 
+                if(st && st.mode === 'slot' && st.activePlayer === myId) showSlotControls(st.type); 
+                else checkTurn(); 
+            });
+        }
+
+        function showToast(a) {
+            const t = document.getElementById('toast-alert'); t.style.display = 'block';
+            if(a.type === 'bomb_get') t.innerText = `💣 [${a.who}] 폭탄!`;
+            else if(a.type === 'bomb_move') t.innerText = `⚠️ 폭탄 이동 → ${a.to}`;
+            else if(a.type === 'bomb_explode') t.innerText = `💥 펑! [${a.victim}] 당첨`;
+            else if(a.type === 'spy_accuse') t.innerText = `🕵️ 누군가 지목되었습니다!`;
+            else t.innerText = "🔔 알림";
+            setTimeout(() => { t.style.display = 'none'; }, 3000);
+        }
+
+        function checkTurn() {
+            db.ref(`users/${myId}/isMyTurn`).once('value', snap => {
+                const isMyTurn = snap.val();
+                const ac = document.getElementById('action-container');
+                db.ref('game/status').once('value', gSnap => {
+                    if(!(gSnap.val() && gSnap.val().mode === 'slot')) {
+                        ac.innerHTML = '';
+                        if(isMyTurn) {
+                            document.getElementById('status-msg').innerText = "당신의 차례입니다!";
+                            const b = document.createElement('button'); b.className = 'btn'; b.innerText = '🎲 주사위 굴리기';
+                            b.onclick = () => { b.disabled=true; db.ref('game/event').push({ type: 'request_roll', playerId: myId }); };
+                            ac.appendChild(b);
+                            document.getElementById('snd-turn').play().catch(()=>{});
+                            if(navigator.vibrate) navigator.vibrate(200);
+                        } else {
+                            if(!document.body.classList.contains('bomb-active')) document.getElementById('status-msg').innerText = "다른 플레이어 대기 중...";
+                        }
+                    }
+                });
+            });
+        }
+        function showSlotControls(type) {
+            const ac = document.getElementById('action-container'); ac.innerHTML = '';
+            const btn = document.createElement('button'); btn.className = 'btn gold'; btn.innerText = '🎰 돌리기 (START)';
+            btn.onclick = () => { db.ref('game/event').push({ type: 'slot_spin', contentType: type }); btn.innerText='결과 대기 중...'; btn.disabled=true; };
+            ac.appendChild(btn);
+        }
+        function openInv() {
+            const list = document.getElementById('inv-list'); list.innerHTML = '';
+            if(!myInventory.length) { list.innerHTML='<p>가방이 비었습니다.</p>'; document.getElementById('inv-modal').style.display='flex'; return; }
+            myInventory.forEach((item, idx) => {
+                const d = document.createElement('div');
+                d.style.cssText = 'background:#f8fafc; padding:15px; margin:10px 0; border-radius:12px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;';
+                d.innerHTML = `<div><b>${item.name}</b><br><small>${item.desc||''}</small></div><button class="use-btn" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px;">사용</button>`;
+                d.querySelector('.use-btn').onclick = () => {
+                    if(item.name.includes("저격") || item.name.includes("흑기사") || item.name.includes("체포") || item.name.includes("지목")) openTargetModal(item, idx);
+                    else if(confirm(`[${item.name}] 사용?`)) useItem(item, idx, null);
+                };
+                list.appendChild(d);
+            });
+            document.getElementById('inv-modal').style.display='flex';
+        }
+        function openTargetModal(item, idx) {
+            const area = document.getElementById('player-list-area'); area.innerHTML = '';
+            document.getElementById('target-title').innerText = item.name;
+            Object.keys(playerList).forEach(pid => {
+                if(pid === myId) return; 
+                const p = playerList[pid];
+                const btn = document.createElement('div'); btn.className = 'player-btn'; btn.innerText = p.name;
+                btn.onclick = () => { if(confirm(`${p.name}님 지목?`)) { useItem(item, idx, pid); closeModal('target-modal'); } };
+                area.appendChild(btn);
+            });
+            closeModal('inv-modal'); document.getElementById('target-modal').style.display='flex';
+        }
+        function useItem(item, idx, targetId) {
+            db.ref('game/event').push({ type: 'item_use', playerId: myId, itemName: item.name, itemDesc: item.desc, targetId: targetId });
+            myInventory.splice(idx, 1); db.ref(`users/${myId}/inventory`).set(myInventory); closeModal('inv-modal');
+        }
+        function submitRule() {
+            const text = document.getElementById('rule-input').value; if(!text) return;
+            db.ref('game/event').push({ type: 'rule_set', rule: text, playerId: myId });
+            db.ref(`users/${myId}/requestRule`).set(null); closeModal('rule-modal');
+        }
+        function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function requestSpySuccess() {
+            if(confirm("정말로 성공했습니까? 모든 플레이어의 투표를 받습니다.")) {
+                db.ref('game/spyVote').set({ requester: myId, status: 'voting', yes: 0, no: 0, voters: {} });
+            }
+        }
+
+        // 투표 모달 감지 (index.html에 vote-modal HTML이 있다고 가정)
+        db.ref('game/spyVote').on('value', snap => {
+            const v = snap.val();
+            if(v && v.status === 'voting' && !v.voters[myId] && v.requester !== myId) {
+                document.getElementById('vote-modal').style.display = 'flex';
+                document.getElementById('vote-msg').innerText = `스파이가 미션을 성공했나요?`;
+            } else {
+                document.getElementById('vote-modal').style.display = 'none';
+            }
+        });
+
+        function submitVote(isYes) {
+            db.ref('game/spyVote/voters/' + myId).set(true);
+            db.ref('game/spyVote/' + (isYes ? 'yes' : 'no')).transaction(c => (c || 0) + 1);
+        }
+</script>
+</body>
+</html>
