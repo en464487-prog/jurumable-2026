@@ -18,7 +18,7 @@
         .char-btn.selected { border-color: var(--point); background: #e3fdf5; transform: scale(1.1); box-shadow: 0 0 15px rgba(0, 184, 148, 0.3); }
         input { padding: 15px; border-radius: 12px; border: 1px solid #dfe6e9; margin: 8px; font-size: 1rem; width: 80%; background: white; outline: none; text-align: center; }
         
-        #game-screen { width: 100%; max-width: 500px; padding: 20px 0; display: none; flex-direction: column; align-items: center; overflow-y: auto; padding-top: 80px; /* 상단 배너 자리 확보 */ }
+        #game-screen { width: 100%; max-width: 500px; padding: 20px 0; display: none; flex-direction: column; align-items: center; overflow-y: auto; padding-top: 80px; }
         
         .card { background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transform: translateZ(0); padding: 20px; border-radius: 25px; width: 85%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid white; }
         
@@ -45,11 +45,15 @@
         #random-btn { background: var(--purple); }
         #sudden-death-btn { background: var(--dark); border: 2px solid var(--danger); }
 
-        /* [핵심 추가] 폭탄 소지 시 화면 맨 위에 고정되는 절대 경고창 */
         #persistent-bomb-banner { position: fixed; top: 0; left: 0; width: 100%; background: linear-gradient(135deg, #d63031, #ff7675); color: white; padding: 15px 0; text-align: center; font-weight: 900; z-index: 50000; box-shadow: 0 5px 20px rgba(214, 48, 49, 0.5); display: none; flex-direction: column; align-items: center; animation: slideDown 0.3s; }
         @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
         .bomb-banner-title { font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .bomb-banner-timer { font-size: 1rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
+        
+        /* [추가] 동의 체크박스 스타일 */
+        .agreement-box { background: rgba(0,0,0,0.03); border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; width: 80%; font-size: 0.9rem; line-height: 1.5; color: #636e72; text-align: left; }
+        .agreement-box label { display: flex; align-items: center; font-weight: 800; color: var(--danger); margin-top: 10px; font-size: 1.1rem; cursor: pointer; }
+        .agreement-box input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--danger); }
     </style>
 </head>
 <body>
@@ -64,6 +68,16 @@
 
     <div id="login-screen">
         <h1 style="color:var(--danger); font-size:3rem; margin-bottom:10px;">JURUMABLE</h1>
+        
+        <div class="agreement-box">
+            ⚠️ <b>게임 시작 전 필수 동의</b><br>
+            본 게임의 룰에 따라 모든 벌칙을 피할 시에 벌주 한 잔을 마시는 것에 동의하십니까?
+            <label>
+                <input type="checkbox" id="agree-checkbox">
+                동의합니다 (ㅁ칸)
+            </label>
+        </div>
+
         <div class="char-grid">
             <div class="char-btn selected" onclick="selectChar('c1', this)">🐶</div>
             <div class="char-btn" onclick="selectChar('c2', this)">🐱</div>
@@ -130,7 +144,7 @@
         let myId = localStorage.getItem('jurumable_pid');
         let me = {}; let allPlayers = {};
         let selectedItemIndex = -1, selectedItemName = "";
-        let globalBombTimer = 0; // 호스트와 연동될 전역 폭탄 타이머
+        let globalBombTimer = 0; 
 
         function playSound(type) {
             const audio = document.getElementById(`sfx-${type}`);
@@ -138,7 +152,14 @@
         }
 
         function selectChar(c,e){ playSound('click'); document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
+        
         function joinGame(){
+            // [추가] 입장 전 체크박스 동의 여부 무조건 확인
+            if(!document.getElementById('agree-checkbox').checked) {
+                playSound('warning');
+                return alert("⚠️ 벌칙 수행에 동의하는 체크박스를 눌러주세요!");
+            }
+
             playSound('success');
             const n=document.getElementById('p-name').value;
             if(!n)return alert("이름!");
@@ -150,7 +171,14 @@
         }
 
         function startListen(){
-            // [핵심 추가] 게임 전체 폭탄 타이머 실시간 감지
+            // [검증] 호스트 초기화 시 플레이어 화면도 즉시 초기화되는 동기화 코드 유지
+            db.ref('game/reset').on('value', s => {
+                if(s.val() === true) {
+                    localStorage.removeItem('jurumable_pid');
+                    location.reload();
+                }
+            });
+
             db.ref('game/bombTimer').on('value', s => {
                 globalBombTimer = s.val() || 0;
                 document.getElementById('p-bomb-timer').innerText = globalBombTimer;
@@ -161,7 +189,6 @@
                 document.getElementById('my-name').innerText=me.name;
                 document.getElementById('my-stats').innerText=`📍 ${me.location||0}번칸`;
                 
-                // [핵심 추가] 내 폭탄 상태 실시간 감지 -> 배너 온오프
                 if(me.hasBomb) {
                     document.getElementById('persistent-bomb-banner').style.display = 'flex';
                 } else {
@@ -199,6 +226,7 @@
                     msg.innerText="대기 중...";
                 }
 
+                // [검증] 스파이 시스템 UI 연동 유지
                 const spy = document.getElementById('spy-panel');
                 if(me.spyMission) {
                     spy.style.display = 'block';
@@ -256,7 +284,7 @@
 
             if(newCount >= me.spyMission.total) {
                 if(confirm("미션 목표 달성! 성공을 선언하시겠습니까?\n(TV에 정체가 공개됩니다)")) {
-                    db.ref('game/spyClaim').set({spyId:myId});
+                    db.ref('game/spyClaim').set({spyId:myId, isFail:false});
                     db.ref(`users/${myId}/spyMission`).set(null);
                 } else {
                     db.ref(`users/${myId}/spyMission/current`).set(newCount);
@@ -289,7 +317,8 @@
 
         function prepareItem(i, item){
             selectedItemIndex=i; selectedItemName=item.name;
-            const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신"];
+            // [검증] 타겟팅 황금열쇠 키워드 모두 유지
+            const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신", "소환", "신고", "돌리기", "러브샷"];
             if(needsTarget.some(k=>item.name.includes(k))) {
                 document.getElementById('inventory-modal').style.display='none';
                 const list=document.getElementById('target-buttons'); list.innerHTML="";
