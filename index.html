@@ -8,8 +8,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <style>
-        :root { --bg: #f4f7f6; --text: #2d3436; --point: #00b894; --danger: #ff7675; --gold: #fdcb6e; --blue: #0984e3; }
-        body { font-family: 'Pretendard', sans-serif; background: radial-gradient(circle at center, #fdfbfb 0%, #ebedee 100%); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+        :root { --bg: #f4f7f6; --text: #2d3436; --point: #00b894; --danger: #ff7675; --gold: #fdcb6e; --blue: #0984e3; --purple: #6c5ce7; --dark: #2d3436;}
+        
+        /* [모바일 최적화] 당겨서 새로고침 방지, 텍스트 선택 방지, 터치 깜빡임 제거 */
+        body { font-family: 'Pretendard', sans-serif; background: radial-gradient(circle at center, #fdfbfb 0%, #ebedee 100%); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; overscroll-behavior-y: contain; user-select: none; -webkit-tap-highlight-color: transparent; }
         
         #login-screen { width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
         .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 90%; margin: 20px 0; }
@@ -18,9 +20,11 @@
         input { padding: 15px; border-radius: 12px; border: 1px solid #dfe6e9; margin: 8px; font-size: 1rem; width: 80%; background: white; outline: none; text-align: center; }
         
         #game-screen { width: 100%; max-width: 500px; padding: 20px 0; display: none; flex-direction: column; align-items: center; overflow-y: auto; }
-        .card { background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); padding: 20px; border-radius: 25px; width: 85%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid white; }
         
-        #dice-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #ff7675, #d63031); border: 5px solid white; font-size: 5rem; color: white; box-shadow: 0 15px 35px rgba(255, 118, 117, 0.4); cursor: pointer; transition: transform 0.1s; margin: 20px 0; display: flex; justify-content: center; align-items: center; }
+        /* [iOS 최적화] 아이폰 사파리를 위한 -webkit-backdrop-filter 및 GPU 가속 추가 */
+        .card { background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transform: translateZ(0); padding: 20px; border-radius: 25px; width: 85%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid white; }
+        
+        #dice-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #ff7675, #d63031); border: 5px solid white; font-size: 5rem; color: white; box-shadow: 0 15px 35px rgba(255, 118, 117, 0.4); cursor: pointer; transition: transform 0.1s; margin: 20px 0; display: flex; justify-content: center; align-items: center; will-change: transform; }
         #dice-btn:active { transform: scale(0.95); }
         #dice-btn:disabled { background: #b2bec3; box-shadow: none; cursor: not-allowed; opacity: 0.5; filter: grayscale(100%); }
         
@@ -37,9 +41,22 @@
         .item-btn, .target-btn { width: 100%; padding: 15px; margin: 5px 0; background: white; border: 1px solid #dfe6e9; border-radius: 12px; font-weight: bold; }
         
         @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        /* 개인 알림창용 애니메이션 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        /* 서든데스 & 랜덤게임 버튼 스타일 추가 */
+        .special-btn { width: 85%; padding: 15px; border-radius: 15px; border: none; font-size: 1.1rem; font-weight: bold; color: white; margin-bottom: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .special-btn:disabled { background: #b2bec3 !important; cursor: not-allowed; opacity: 0.5; }
+        #random-btn { background: var(--purple); }
+        #sudden-death-btn { background: var(--dark); border: 2px solid var(--danger); }
     </style>
 </head>
 <body>
+    <audio id="sfx-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
+    <audio id="sfx-warning" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <audio id="sfx-success" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+
     <div id="login-screen">
         <h1 style="color:var(--danger); font-size:3rem; margin-bottom:10px;">JURUMABLE</h1>
         <div class="char-grid">
@@ -77,6 +94,9 @@
         <button id="slot-trigger-btn" class="ctrl-btn" onclick="triggerSlot()">🎰 레버 당기기!</button>
         <button id="roulette-trigger-btn" class="ctrl-btn" onclick="triggerRoulette()">⚔️ 룰렛 돌리기!</button>
 
+        <button id="random-btn" class="special-btn" onclick="triggerRandomGame()">🔀 외부 랜덤 게임 호출</button>
+        <button id="sudden-death-btn" class="special-btn" onclick="triggerSuddenDeath()">☠️ 서든데스 발동 (HOST)</button>
+
         <h3 id="status-msg" style="color:#b2bec3;">대기 중...</h3>
         <button onclick="openInventory()" style="width:85%; padding:15px; background:white; border:2px solid var(--gold); border-radius:15px; color:#2d3436; font-weight:bold;">🎒 내 가방 열기</button>
     </div>
@@ -92,6 +112,13 @@
         </div>
     </div>
 
+    <div id="mobile-alert" style="display:none; position:fixed; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center; color:white; animation: fadeIn 0.3s;">
+        <div id="m-alert-icon" style="font-size:5rem; margin-bottom:15px; animation: bounce 1s infinite;">💌</div>
+        <div id="m-alert-title" style="font-size:2rem; font-weight:900; color:#fdcb6e; margin-bottom:10px;"></div>
+        <div id="m-alert-desc" style="font-size:1.2rem; color:#dfe6e9; margin-bottom:30px; word-break:keep-all;"></div>
+        <button onclick="closeMobileAlert()" style="padding:15px 40px; font-size:1.2rem; font-weight:bold; background:var(--blue); color:white; border:none; border-radius:50px; box-shadow:0 10px 20px rgba(9,132,227,0.4);">확인했습니다</button>
+    </div>
+
     <script>
         const firebaseConfig = { apiKey: "AIzaSyB8vzF10M-hkk1eBHSsHDHlAo36TXAJVF0", authDomain: "real-jurumable.firebaseapp.com", projectId: "real-jurumable", storageBucket: "real-jurumable.firebasestorage.app", messagingSenderId: "481733347334", appId: "1:481733347334:web:dff7506e01dc200fbe9b87" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -101,8 +128,18 @@
         let me = {}; let allPlayers = {};
         let selectedItemIndex = -1, selectedItemName = "";
 
-        function selectChar(c,e){ document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
+        // 사운드 재생 유틸리티 (메모리 낭비 없이 재사용)
+        function playSound(type) {
+            const audio = document.getElementById(`sfx-${type}`);
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Sound autoplay prevented:", e));
+            }
+        }
+
+        function selectChar(c,e){ playSound('click'); document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
         function joinGame(){
+            playSound('success');
             const n=document.getElementById('p-name').value;
             if(!n)return alert("이름!");
             if(!myId){myId='p_'+Math.random().toString(36).substr(2,9);localStorage.setItem('jurumable_pid',myId);}
@@ -127,6 +164,10 @@
                 const rBtn = document.getElementById('roulette-trigger-btn');
                 const msg = document.getElementById('status-msg');
 
+                // 특수 버튼 DOM 가져오기
+                const rndBtn = document.getElementById('random-btn');
+                const sdnBtn = document.getElementById('sudden-death-btn');
+
                 // 초기화
                 dBtn.style.display = 'flex'; sBtn.style.display = 'none'; rBtn.style.display = 'none';
 
@@ -139,11 +180,20 @@
                 } else if(me.reqRule) { // 규칙 입력 요청
                     document.getElementById('rule-modal').style.display = 'flex';
                 } else if(me.isWaitResult) {
-                    dBtn.disabled=true; dBtn.style.opacity="0.5"; msg.innerText="결과 확인 중...";
+                    dBtn.disabled=true; dBtn.style.opacity="0.5"; 
+                    // 플레이어 순서 제한: 결과 대기중 특수버튼 비활성화
+                    rndBtn.disabled=true; sdnBtn.disabled=true;
+                    msg.innerText="결과 확인 중...";
                 } else if(me.isMyTurn) {
-                    dBtn.disabled=false; dBtn.style.opacity="1"; msg.innerText="🔥 당신 차례!";
+                    dBtn.disabled=false; dBtn.style.opacity="1"; 
+                    // 플레이어 순서 제한: 내 턴일때만 특수버튼 활성화
+                    rndBtn.disabled=false; sdnBtn.disabled=false;
+                    msg.innerText="🔥 당신 차례!";
                 } else {
-                    dBtn.disabled=true; dBtn.style.opacity="0.5"; msg.innerText="대기 중...";
+                    dBtn.disabled=true; dBtn.style.opacity="0.5"; 
+                    // 플레이어 순서 제한: 내 턴이 아닐때 철저히 비활성화
+                    rndBtn.disabled=true; sdnBtn.disabled=true;
+                    msg.innerText="대기 중...";
                 }
 
                 // 스파이 UI
@@ -156,19 +206,60 @@
                 } else spy.style.display = 'none';
             });
             db.ref('users').on('value',s=>{allPlayers=s.val()||{}});
+
+            // 개인 알림 수신 리스너 (황금열쇠나 벌칙 당첨 시 발동)
+            db.ref(`users/${myId}/personalAlert`).on('value', s => {
+                const data = s.val();
+                if(data) {
+                    // 사운드 재생
+                    playSound('warning');
+
+                    // 삼성/안드로이드용 진동 (아이폰은 무시되므로 안전함)
+                    if(navigator.vibrate) navigator.vibrate(500); 
+                    
+                    // 모바일 알림창 띄우기
+                    document.getElementById('mobile-alert').style.display = 'flex';
+                    document.getElementById('m-alert-icon').innerText = data.icon || '💌';
+                    document.getElementById('m-alert-title').innerText = data.title;
+                    document.getElementById('m-alert-desc').innerHTML = data.desc;
+                    
+                    // 한 번 띄웠으니 데이터베이스에서 삭제 (중복 알림 방지)
+                    db.ref(`users/${myId}/personalAlert`).set(null); 
+                }
+            });
         }
 
-        function rollDice(){ db.ref(`users/${myId}/isWaitResult`).set(true); db.ref('game/event').push({type:'request_roll',playerId:myId}); }
-        function triggerSlot(){ db.ref(`users/${myId}/reqSlot`).set(null); db.ref('game/slotTrigger').set(myId); }
+        function rollDice(){ playSound('click'); db.ref(`users/${myId}/isWaitResult`).set(true); db.ref('game/event').push({type:'request_roll',playerId:myId}); }
+        function triggerSlot(){ playSound('click'); db.ref(`users/${myId}/reqSlot`).set(null); db.ref('game/slotTrigger').set(myId); }
         function triggerRoulette(){ 
+            playSound('click');
             const opponent = me.reqRoulette.opponent;
             db.ref(`users/${myId}/reqRoulette`).set(null); 
             db.ref('game/rouletteTrigger').set({p1:myId, p2:opponent}); 
         }
 
+        // 랜덤 게임 로직: 외부 데이터와 연결될 Host Event 트리거
+        function triggerRandomGame() {
+            playSound('click');
+            if(confirm("외부 랜덤 게임을 가져오시겠습니까?")) {
+                db.ref('game/event').push({type:'request_random_game', playerId:myId});
+                db.ref(`users/${myId}/isWaitResult`).set(true); // 결과 대기 상태로 전환
+            }
+        }
+
+        // 서든데스 로직: Host(메인화면)로 서든데스 시작 이벤트 전송
+        function triggerSuddenDeath() {
+            playSound('warning');
+            if(confirm("정말 게임을 서든데스 모드로 전환하시겠습니까? (되돌릴 수 없습니다!)")) {
+                db.ref('game/status').update({ suddenDeath: true });
+                db.ref('game/event').push({type:'sudden_death_triggered', playerId:myId});
+            }
+        }
+
         // 스파이 미션 진행
         function progressSpy() {
             if(!me.spyMission) return;
+            playSound('click');
             const newCount = (me.spyMission.current || 0) + 1;
             
             // TV에 현황판 띄우기 요청
@@ -195,12 +286,14 @@
         function sendRule() {
             const rule = document.getElementById('rule-input').value;
             if(!rule) return alert("내용을 입력하세요");
+            playSound('success');
             db.ref('game/newRule').set(rule);
             db.ref(`users/${myId}/reqRule`).set(null);
             document.getElementById('rule-modal').style.display = 'none';
         }
 
         function openInventory(){
+            playSound('click');
             const list=document.getElementById('inventory-list'); list.innerHTML="";
             (me.inventory||[]).forEach((item,i)=>{
                 const b=document.createElement('div'); b.className='item-btn';
@@ -229,6 +322,7 @@
         }
 
         function sendItem(tid){
+            playSound('success');
             db.ref('game/event').push({type:'item_use', playerId:myId, itemName:selectedItemName, targetId:tid});
             const nextInv = me.inventory.filter((_,i)=>i!==selectedItemIndex);
             db.ref(`users/${myId}/inventory`).set(nextInv);
@@ -236,6 +330,12 @@
         }
 
         function closeModal(id){ document.getElementById(id).style.display='none'; }
+
+        // 모바일 알림창 닫기 함수
+        function closeMobileAlert() {
+            playSound('click');
+            document.getElementById('mobile-alert').style.display = 'none';
+        }
     </script>
 </body>
 </html>
