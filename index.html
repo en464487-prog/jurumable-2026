@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JURUMABLE PLAYER</title>
+    <title>JURUMABLE PLAYER - FINAL INTEGRATED</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
@@ -50,7 +50,6 @@
         .bomb-banner-title { font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .bomb-banner-timer { font-size: 1rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
         
-        /* [추가] 벌칙 동의 체크박스 디자인 */
         .agreement-box { background: rgba(0,0,0,0.03); border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; width: 80%; font-size: 0.9rem; line-height: 1.5; color: #636e72; text-align: left; }
         .agreement-box label { display: flex; align-items: center; font-weight: 800; color: var(--danger); margin-top: 10px; font-size: 1.1rem; cursor: pointer; }
         .agreement-box input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--danger); }
@@ -154,7 +153,6 @@
         function selectChar(c,e){ playSound('click'); document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
         
         function joinGame(){
-            // [검증] 체크박스 미체크 시 입장 불가 처리
             if(!document.getElementById('agree-checkbox').checked) {
                 playSound('warning');
                 return alert("⚠️ 벌칙 수행에 동의하는 체크박스를 눌러주세요!");
@@ -171,7 +169,6 @@
         }
 
         function startListen(){
-            // [검증] 호스트 초기화 명령 수신 시 자동 새로고침(로그아웃)
             db.ref('game/reset').on('value', s => {
                 if(s.val() === true) {
                     localStorage.removeItem('jurumable_pid');
@@ -204,7 +201,29 @@
 
                 dBtn.style.display = 'flex'; sBtn.style.display = 'none'; rBtn.style.display = 'none';
 
-                if(me.reqSlot) { 
+                // [NEW] 칸 도착해서 지목 요청이 왔을 때 (자동 팝업)
+                if(me.reqTarget) {
+                    dBtn.style.display = 'none';
+                    msg.innerText = "👉 상대를 지목하세요!";
+                    
+                    document.getElementById('target-modal').style.display = 'flex';
+                    
+                    // 호스트에 "나 지목 중이야" 오버레이 띄우기 신호
+                    db.ref('game/targeting').set({playerId: myId, item: me.reqTarget});
+                    
+                    const list = document.getElementById('target-buttons'); 
+                    list.innerHTML = "";
+                    Object.keys(allPlayers).forEach(k => {
+                        if(k === myId) return; 
+                        const b = document.createElement('button'); 
+                        b.className = 'target-btn'; 
+                        b.innerText = allPlayers[k].name;
+                        // 클릭 시 칸 지목 전송 함수(sendTargetCell) 호출
+                        b.onclick = () => { if(confirm(allPlayers[k].name + "님을 지목하시겠습니까?")) sendTargetCell(k); };
+                        list.appendChild(b);
+                    });
+                }
+                else if(me.reqSlot) { 
                     dBtn.style.display = 'none'; sBtn.style.display = 'block';
                     msg.innerText = "🎰 레버를 당기세요!";
                 } else if(me.reqRoulette) { 
@@ -316,9 +335,11 @@
 
         function prepareItem(i, item){
             selectedItemIndex=i; selectedItemName=item.name;
-            // [검증] 타겟팅 키워드 100% 보존 (신고, 소환 등)
             const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신", "소환", "신고", "돌리기", "러브샷"];
             if(needsTarget.some(k=>item.name.includes(k))) {
+                // [NEW] 아이템 지목 시에도 TV 오버레이 띄우기
+                db.ref('game/targeting').set({playerId: myId, item: item.name});
+
                 document.getElementById('inventory-modal').style.display='none';
                 const list=document.getElementById('target-buttons'); list.innerHTML="";
                 Object.keys(allPlayers).forEach(k=>{
@@ -335,13 +356,35 @@
 
         function sendItem(tid){
             playSound('success');
+            // [NEW] 사용 완료 시 TV 오버레이 끄기
+            db.ref('game/targeting').set(null);
+
             db.ref('game/event').push({type:'item_use', playerId:myId, itemName:selectedItemName, targetId:tid});
             const nextInv = me.inventory.filter((_,i)=>i!==selectedItemIndex);
             db.ref(`users/${myId}/inventory`).set(nextInv);
             closeModal('inventory-modal'); closeModal('target-modal');
         }
 
-        function closeModal(id){ document.getElementById(id).style.display='none'; }
+        // [NEW] 칸 도착 지목 전송 함수
+        function sendTargetCell(tid) {
+            playSound('success');
+            db.ref('game/event').push({
+                type: 'cell_target', 
+                playerId: myId, 
+                targetId: tid, 
+                cellName: me.reqTarget
+            });
+            
+            db.ref(`users/${myId}/reqTarget`).set(null); 
+            db.ref('game/targeting').set(null); 
+            closeModal('target-modal');
+        }
+
+        function closeModal(id){ 
+            // [NEW] 창 닫으면 TV 알림도 끄기
+            if(id === 'target-modal') db.ref('game/targeting').set(null);
+            document.getElementById(id).style.display='none'; 
+        }
         function closeMobileAlert() { playSound('click'); document.getElementById('mobile-alert').style.display = 'none'; }
     </script>
 </body>
