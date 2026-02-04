@@ -50,7 +50,7 @@
         .bomb-banner-title { font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .bomb-banner-timer { font-size: 1rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
         
-        /* [추가] 동의 체크박스 스타일 */
+        /* [추가] 벌칙 동의 체크박스 디자인 */
         .agreement-box { background: rgba(0,0,0,0.03); border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; width: 80%; font-size: 0.9rem; line-height: 1.5; color: #636e72; text-align: left; }
         .agreement-box label { display: flex; align-items: center; font-weight: 800; color: var(--danger); margin-top: 10px; font-size: 1.1rem; cursor: pointer; }
         .agreement-box input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--danger); }
@@ -154,7 +154,7 @@
         function selectChar(c,e){ playSound('click'); document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
         
         function joinGame(){
-            // [추가] 입장 전 체크박스 동의 여부 무조건 확인
+            // [검증] 체크박스 미체크 시 입장 불가 처리
             if(!document.getElementById('agree-checkbox').checked) {
                 playSound('warning');
                 return alert("⚠️ 벌칙 수행에 동의하는 체크박스를 눌러주세요!");
@@ -171,7 +171,7 @@
         }
 
         function startListen(){
-            // [검증] 호스트 초기화 시 플레이어 화면도 즉시 초기화되는 동기화 코드 유지
+            // [검증] 호스트 초기화 명령 수신 시 자동 새로고침(로그아웃)
             db.ref('game/reset').on('value', s => {
                 if(s.val() === true) {
                     localStorage.removeItem('jurumable_pid');
@@ -226,7 +226,6 @@
                     msg.innerText="대기 중...";
                 }
 
-                // [검증] 스파이 시스템 UI 연동 유지
                 const spy = document.getElementById('spy-panel');
                 if(me.spyMission) {
                     spy.style.display = 'block';
@@ -317,7 +316,7 @@
 
         function prepareItem(i, item){
             selectedItemIndex=i; selectedItemName=item.name;
-            // [검증] 타겟팅 황금열쇠 키워드 모두 유지
+            // [검증] 타겟팅 키워드 100% 보존 (신고, 소환 등)
             const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신", "소환", "신고", "돌리기", "러브샷"];
             if(needsTarget.some(k=>item.name.includes(k))) {
                 document.getElementById('inventory-modal').style.display='none';
