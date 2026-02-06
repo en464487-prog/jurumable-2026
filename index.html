@@ -334,6 +334,9 @@
         }
 
         function prepareItem(i, item){
+            // [NEW] 아이템 터치 시 설명 팝업 및 사용 확인 기능 추가
+            if(!confirm(`[ ${item.name} ]\n\n${item.desc}\n\n이 아이템을 사용하시겠습니까?`)) return;
+
             selectedItemIndex=i; selectedItemName=item.name;
             const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신", "소환", "신고", "돌리기", "러브샷"];
             if(needsTarget.some(k=>item.name.includes(k))) {
@@ -350,7 +353,8 @@
                 });
                 document.getElementById('target-modal').style.display='flex';
             } else {
-                if(confirm("바로 사용하시겠습니까?")) sendItem(null);
+                // 이미 위에서 confirm 했으므로 바로 전송
+                sendItem(null);
             }
         }
 
