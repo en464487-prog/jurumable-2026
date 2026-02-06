@@ -2,394 +2,250 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JURUMABLE PLAYER - FINAL GOLD</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For My Love</title>
+    <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f4f7f6; --text: #2d3436; --point: #00b894; --danger: #ff7675; --gold: #fdcb6e; --blue: #0984e3; --purple: #6c5ce7; --dark: #2d3436;}
-        
-        body { font-family: 'Pretendard', sans-serif; background: radial-gradient(circle at center, #fdfbfb 0%, #ebedee 100%); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; overscroll-behavior-y: contain; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        #login-screen { width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
-        .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 90%; margin: 20px 0; }
-        .char-btn { background: white; border: 2px solid #dfe6e9; border-radius: 15px; font-size: 2rem; padding: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .char-btn.selected { border-color: var(--point); background: #e3fdf5; transform: scale(1.1); box-shadow: 0 0 15px rgba(0, 184, 148, 0.3); }
-        input { padding: 15px; border-radius: 12px; border: 1px solid #dfe6e9; margin: 8px; font-size: 1rem; width: 80%; background: white; outline: none; text-align: center; }
-        
-        #game-screen { width: 100%; max-width: 500px; padding: 20px 0; display: none; flex-direction: column; align-items: center; overflow-y: auto; padding-top: 80px; }
-        
-        .card { background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transform: translateZ(0); padding: 20px; border-radius: 25px; width: 85%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid white; }
-        
-        #dice-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #ff7675, #d63031); border: 5px solid white; font-size: 5rem; color: white; box-shadow: 0 15px 35px rgba(255, 118, 117, 0.4); cursor: pointer; transition: transform 0.1s; margin: 20px 0; display: flex; justify-content: center; align-items: center; will-change: transform; }
-        #dice-btn:active { transform: scale(0.95); }
-        #dice-btn:disabled { background: #b2bec3; box-shadow: none; cursor: not-allowed; opacity: 0.5; filter: grayscale(100%); }
-        
-        .ctrl-btn { width: 100%; padding: 20px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: 900; color: white; margin-bottom: 10px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.1); animation: popUp 0.3s; }
-        #slot-trigger-btn { background: var(--gold); display: none; }
-        #roulette-trigger-btn { background: var(--blue); display: none; }
+        /* ... (기본 스타일은 동일) ... */
+        :root {
+            --main-bg: #f9f9f9;
+            --text-color: #5a4a42;
+            --point-color: #d4af37;
+            --pink-accent: #e8b4b8;
+        }
 
-        #spy-panel { width: 85%; padding: 20px; background: white; border-radius: 20px; border: 2px solid var(--danger); box-shadow: 0 10px 30px rgba(255, 118, 117, 0.2); display: none; margin-bottom: 20px; }
-        
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 9999; }
-        .modal-content { background: white; width: 85%; max-height: 70%; overflow-y: auto; border-radius: 25px; padding: 25px; text-align: center; }
-        .item-btn, .target-btn { width: 100%; padding: 15px; margin: 5px 0; background: white; border: 1px solid #dfe6e9; border-radius: 12px; font-weight: bold; }
-        
-        @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--main-bg);
+            font-family: 'Noto Serif KR', serif;
+            overflow: hidden;
+            color: var(--text-color);
+        }
 
-        .special-btn { width: 85%; padding: 15px; border-radius: 15px; border: none; font-size: 1.1rem; font-weight: bold; color: white; margin-bottom: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .special-btn:disabled { background: #b2bec3 !important; cursor: not-allowed; opacity: 0.5; }
-        #random-btn { background: var(--purple); }
-        #sudden-death-btn { background: var(--dark); border: 2px solid var(--danger); }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
 
-        #persistent-bomb-banner { position: fixed; top: 0; left: 0; width: 100%; background: linear-gradient(135deg, #d63031, #ff7675); color: white; padding: 15px 0; text-align: center; font-weight: 900; z-index: 50000; box-shadow: 0 5px 20px rgba(214, 48, 49, 0.5); display: none; flex-direction: column; align-items: center; animation: slideDown 0.3s; }
-        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-        .bomb-banner-title { font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .bomb-banner-timer { font-size: 1rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
+        /* --- 이미지 래퍼 수정 (겹치기 위해) --- */
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 4 / 3;
+            cursor: pointer;
+            /* 중요: 이미지를 겹치기 위해 relative 설정 */
+        }
+
+        .letter-image {
+            position: absolute; /* 이미지를 서로 겹치게 함 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            
+            /* 핵심: 전환 애니메이션 설정 (1.5초 동안 서서히 변함) */
+            transition: opacity 1.5s ease-in-out, transform 1.5s ease;
+        }
+
+        /* 닫힌 편지 (위) */
+        #closedImg {
+            z-index: 2;
+            opacity: 1;
+            transform: scale(1);
+        }
         
-        .agreement-box { background: rgba(0,0,0,0.03); border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; width: 80%; font-size: 0.9rem; line-height: 1.5; color: #636e72; text-align: left; }
-        .agreement-box label { display: flex; align-items: center; font-weight: 800; color: var(--danger); margin-top: 10px; font-size: 1.1rem; cursor: pointer; }
-        .agreement-box input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--danger); }
+        /* 열린 편지 (아래) */
+        #openedImg {
+            z-index: 1;
+            opacity: 0; /* 처음엔 안 보임 */
+            transform: scale(0.95); /* 약간 작게 시작 */
+        }
+
+        /* --- 클릭 시 변화 (애니메이션) --- */
+        .image-wrapper.open #closedImg {
+            opacity: 0; /* 서서히 사라짐 */
+            transform: scale(1.05); /* 약간 커지면서 사라짐 (몽환적 효과) */
+            pointer-events: none;
+        }
+        
+        .image-wrapper.open #openedImg {
+            opacity: 1; /* 서서히 나타남 */
+            transform: scale(1); /* 원래 크기로 돌아옴 */
+            z-index: 3;
+        }
+
+
+        /* --- 질문 및 버튼 영역 (동일) --- */
+        .question-content {
+            text-align: center;
+            margin-top: 40px;
+            display: none; 
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .container.show-content .question-content {
+            display: block;
+            /* 이미지가 변하는 시간(1.5s) 뒤에 텍스트 등장 */
+            animation: fadeUp 1s ease 1.0s forwards;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-family: 'Parisienne', cursive;
+            font-size: 3rem;
+            color: var(--point-color);
+            margin: 0 0 15px 0;
+        }
+        
+        p.sub-title {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        
+        .highlight { color: var(--pink-accent); font-weight: bold; }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        button {
+            padding: 12px 40px;
+            border: 2px solid var(--point-color);
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+            color: var(--point-color);
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .yes-btn { background: var(--point-color); color: white; }
+        .no-btn { background: #fff; color: #aaa; border-color: #ddd; }
+
+        /* 클릭 가이드 */
+        .click-guide {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.95rem;
+            color: var(--pink-accent);
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .container.show-content .click-guide { opacity: 0; }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* 결과 화면 */
+        #resultScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        #resultScreen.show { opacity: 1; pointer-events: all; }
+        #resultScreen h1 { font-family: 'Parisienne', cursive; font-size: 4rem; color: var(--pink-accent); margin-bottom: 20px; }
+        #resultScreen p { font-size: 1.5rem; font-weight: bold; }
+
     </style>
 </head>
 <body>
-    <audio id="sfx-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
-    <audio id="sfx-warning" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
-    <audio id="sfx-success" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+    <audio id="bgMusic" src="bgm.mp3" loop preload="auto"></audio>
 
-    <div id="persistent-bomb-banner">
-        <div class="bomb-banner-title">💣 폭탄 소지 중! 빨리 넘기세요!</div>
-        <div class="bomb-banner-timer"><span id="p-bomb-timer"></span>턴 뒤 폭발!</div>
+    <div class="container" id="mainContainer">
+        <div class="image-wrapper" id="letterWrapper" onclick="openLetter()">
+            <img id="closedImg" class="letter-image" src="closed.png" alt="닫힌 편지">
+            <img id="openedImg" class="letter-image" src="open.png" alt="열린 편지">
+        </div>
+        <div class="click-guide" id="guide">Touch to Open</div>
+
+        <div class="question-content">
+            <h2>Be My Valentine</h2>
+            <p class="sub-title">
+                사랑하는 자기야,<br>
+                이번 발렌타인데이도 <span class="highlight">우리 함께</span> 할까?
+            </p>
+            <div class="btn-group" id="btnGroup">
+                <button class="yes-btn" onclick="sayYes()">YES!</button>
+                <button class="no-btn" onclick="swapButtons()">NO..</button>
+            </div>
+        </div>
     </div>
-
-    <div id="login-screen">
-        <h1 style="color:var(--danger); font-size:3rem; margin-bottom:10px;">JURUMABLE</h1>
-        
-        <div class="agreement-box">
-            ⚠️ <b>게임 시작 전 필수 동의</b><br>
-            본 게임의 룰에 따라 모든 벌칙을 피할 시에 벌주 한 잔을 마시는 것에 동의하십니까?
-            <label>
-                <input type="checkbox" id="agree-checkbox">
-                동의합니다 (ㅁ칸)
-            </label>
-        </div>
-
-        <div class="char-grid">
-            <div class="char-btn selected" onclick="selectChar('c1', this)">🐶</div>
-            <div class="char-btn" onclick="selectChar('c2', this)">🐱</div>
-            <div class="char-btn" onclick="selectChar('c3', this)">🐭</div>
-            <div class="char-btn" onclick="selectChar('c4', this)">🐹</div>
-            <div class="char-btn" onclick="selectChar('c5', this)">🐰</div>
-            <div class="char-btn" onclick="selectChar('c6', this)">🦊</div>
-            <div class="char-btn" onclick="selectChar('c7', this)">🐻</div>
-            <div class="char-btn" onclick="selectChar('c8', this)">🐼</div>
-        </div>
-        <input type="hidden" id="selected-char" value="c1">
-        <input type="text" id="p-name" placeholder="닉네임">
-        <button onclick="joinGame()" style="width:80%; padding:15px; margin-top:20px; background:var(--blue); color:white; border:none; border-radius:15px; font-weight:bold;">입장하기</button>
-    </div>
-
-    <div id="game-screen">
-        <div class="card">
-            <h2 id="my-name" style="margin:0;"></h2>
-            <div id="my-stats" style="color:#636e72;">📍 출발</div>
-        </div>
-        
-        <div id="spy-panel">
-            <div style="background:var(--danger); color:white; padding:5px 15px; border-radius:20px; display:inline-block; margin-bottom:10px;">🕵️ SPY MISSION</div>
-            <div id="spy-title" style="font-weight:bold; font-size:1.2rem;"></div>
-            <div id="spy-desc" style="font-size:0.9rem; color:#666; margin-bottom:10px;"></div>
-            <div id="spy-count" style="font-weight:bold; color:var(--point);">0 / 0</div>
-            <button onclick="progressSpy()" style="width:100%; padding:10px; margin-top:10px; background:var(--point); color:white; border:none; border-radius:10px;">미션 1회 수행!</button>
-        </div>
-
-        <button id="dice-btn" onclick="rollDice()">🎲</button>
-        <button id="slot-trigger-btn" class="ctrl-btn" onclick="triggerSlot()">🎰 레버 당기기!</button>
-        <button id="roulette-trigger-btn" class="ctrl-btn" onclick="triggerRoulette()">⚔️ 룰렛 돌리기!</button>
-
-        <button id="random-btn" class="special-btn" onclick="triggerRandomGame()">🔀 외부 랜덤 게임 호출</button>
-        <button id="sudden-death-btn" class="special-btn" onclick="triggerSuddenDeath()">☠️ 서든데스 발동 (HOST)</button>
-
-        <h3 id="status-msg" style="color:#b2bec3;">대기 중...</h3>
-        <button onclick="openInventory()" style="width:85%; padding:15px; background:white; border:2px solid var(--gold); border-radius:15px; color:#2d3436; font-weight:bold;">🎒 내 가방 열기</button>
-    </div>
-
-    <div id="inventory-modal" class="modal"><div class="modal-content"><h3>🎒 아이템</h3><div id="inventory-list"></div><button onclick="closeModal('inventory-modal')" style="margin-top:20px; border:none; background:none; text-decoration:underline;">닫기</button></div></div>
-    <div id="target-modal" class="modal"><div class="modal-content"><h3>누구에게?</h3><div id="target-buttons"></div><button onclick="closeModal('target-modal')" style="margin-top:20px; border:none; background:none; text-decoration:underline;">취소</button></div></div>
     
-    <div id="rule-modal" class="modal">
-        <div class="modal-content">
-            <h3>👑 새로운 규칙 제정</h3>
-            <input type="text" id="rule-input" placeholder="예: 영어 쓰면 한 잔" style="width:100%; margin:20px 0;">
-            <button onclick="sendRule()" style="width:100%; padding:15px; background:var(--gold); border:none; border-radius:10px; font-weight:bold;">규칙 선포!</button>
-        </div>
-    </div>
-
-    <div id="mobile-alert" style="display:none; position:fixed; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center; color:white; animation: fadeIn 0.3s;">
-        <div id="m-alert-icon" style="font-size:5rem; margin-bottom:15px; animation: bounce 1s infinite;">💌</div>
-        <div id="m-alert-title" style="font-size:2rem; font-weight:900; color:#fdcb6e; margin-bottom:10px;"></div>
-        <div id="m-alert-desc" style="font-size:1.2rem; color:#dfe6e9; margin-bottom:30px; word-break:keep-all;"></div>
-        <button onclick="closeMobileAlert()" style="padding:15px 40px; font-size:1.2rem; font-weight:bold; background:var(--blue); color:white; border:none; border-radius:50px; box-shadow:0 10px 20px rgba(9,132,227,0.4);">확인했습니다</button>
+    <div id="resultScreen">
+        <h1>Thank You!</h1>
+        <p>💖 행복한 하루 보내자 💖</p>
     </div>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyB8vzF10M-hkk1eBHSsHDHlAo36TXAJVF0", authDomain: "real-jurumable.firebaseapp.com", projectId: "real-jurumable", storageBucket: "real-jurumable.firebasestorage.app", messagingSenderId: "481733347334", appId: "1:481733347334:web:dff7506e01dc200fbe9b87" };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const mainContainer = document.getElementById('mainContainer');
+        const letterWrapper = document.getElementById('letterWrapper');
+        const btnGroup = document.getElementById('btnGroup');
+        const bgMusic = document.getElementById('bgMusic');
+        const resultScreen = document.getElementById('resultScreen');
 
-        let myId = localStorage.getItem('jurumable_pid');
-        let me = {}; let allPlayers = {};
-        let selectedItemIndex = -1, selectedItemName = "";
-        let globalBombTimer = 0; 
-
-        function playSound(type) {
-            const audio = document.getElementById(`sfx-${type}`);
-            if (audio) { audio.currentTime = 0; audio.play().catch(e => console.log("Sound autoplay prevented:", e)); }
-        }
-
-        function selectChar(c,e){ playSound('click'); document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); e.classList.add('selected'); document.getElementById('selected-char').value=c; }
-        
-        function joinGame(){
-            if(!document.getElementById('agree-checkbox').checked) {
-                playSound('warning');
-                return alert("⚠️ 벌칙 수행에 동의하는 체크박스를 눌러주세요!");
-            }
-
-            playSound('success');
-            const n=document.getElementById('p-name').value;
-            if(!n)return alert("이름!");
-            if(!myId){myId='p_'+Math.random().toString(36).substr(2,9);localStorage.setItem('jurumable_pid',myId);}
-            db.ref(`users/${myId}`).set({name:n,char:document.getElementById('selected-char').value,location:0,drinks:0,isMyTurn:false,isWaitResult:false,inventory:[]});
-            document.getElementById('login-screen').style.display='none';
-            document.getElementById('game-screen').style.display='flex';
-            startListen();
-        }
-
-        function startListen(){
-            db.ref('game/reset').on('value', s => {
-                if(s.val() === true) {
-                    localStorage.removeItem('jurumable_pid');
-                    location.reload();
-                }
-            });
-
-            db.ref('game/bombTimer').on('value', s => {
-                globalBombTimer = s.val() || 0;
-                document.getElementById('p-bomb-timer').innerText = globalBombTimer;
-            });
-
-            db.ref(`users/${myId}`).on('value',s=>{
-                me=s.val(); if(!me)return;
-                document.getElementById('my-name').innerText=me.name;
-                document.getElementById('my-stats').innerText=`📍 ${me.location||0}번칸`;
+        function openLetter() {
+            if (!letterWrapper.classList.contains('open')) {
+                letterWrapper.classList.add('open');
+                mainContainer.classList.add('show-content');
                 
-                if(me.hasBomb) {
-                    document.getElementById('persistent-bomb-banner').style.display = 'flex';
-                } else {
-                    document.getElementById('persistent-bomb-banner').style.display = 'none';
-                }
-
-                const dBtn = document.getElementById('dice-btn');
-                const sBtn = document.getElementById('slot-trigger-btn');
-                const rBtn = document.getElementById('roulette-trigger-btn');
-                const msg = document.getElementById('status-msg');
-                const rndBtn = document.getElementById('random-btn');
-                const sdnBtn = document.getElementById('sudden-death-btn');
-
-                dBtn.style.display = 'flex'; sBtn.style.display = 'none'; rBtn.style.display = 'none';
-
-                // [NEW] 칸 도착해서 지목 요청이 왔을 때 (자동 팝업)
-                if(me.reqTarget) {
-                    dBtn.style.display = 'none';
-                    msg.innerText = "👉 상대를 지목하세요!";
-                    
-                    document.getElementById('target-modal').style.display = 'flex';
-                    
-                    // 호스트에 "나 지목 중이야" 오버레이 띄우기 신호
-                    db.ref('game/targeting').set({playerId: myId, item: me.reqTarget});
-                    
-                    const list = document.getElementById('target-buttons'); 
-                    list.innerHTML = "";
-                    Object.keys(allPlayers).forEach(k => {
-                        if(k === myId) return; 
-                        const b = document.createElement('button'); 
-                        b.className = 'target-btn'; 
-                        b.innerText = allPlayers[k].name;
-                        // 클릭 시 칸 지목 전송 함수(sendTargetCell) 호출
-                        b.onclick = () => { if(confirm(allPlayers[k].name + "님을 지목하시겠습니까?")) sendTargetCell(k); };
-                        list.appendChild(b);
-                    });
-                }
-                else if(me.reqSlot) { 
-                    dBtn.style.display = 'none'; sBtn.style.display = 'block';
-                    msg.innerText = "🎰 레버를 당기세요!";
-                } else if(me.reqRoulette) { 
-                    dBtn.style.display = 'none'; rBtn.style.display = 'block';
-                    msg.innerText = "⚔️ 룰렛을 돌리세요!";
-                } else if(me.reqRule) { 
-                    document.getElementById('rule-modal').style.display = 'flex';
-                } else if(me.isWaitResult) {
-                    dBtn.disabled=true; dBtn.style.opacity="0.5"; 
-                    rndBtn.disabled=true; sdnBtn.disabled=true;
-                    msg.innerText="결과 확인 중...";
-                } else if(me.isMyTurn) {
-                    dBtn.disabled=false; dBtn.style.opacity="1"; 
-                    rndBtn.disabled=false; sdnBtn.disabled=false;
-                    msg.innerText="🔥 당신 차례!";
-                } else {
-                    dBtn.disabled=true; dBtn.style.opacity="0.5"; 
-                    rndBtn.disabled=true; sdnBtn.disabled=true;
-                    msg.innerText="대기 중...";
-                }
-
-                const spy = document.getElementById('spy-panel');
-                if(me.spyMission) {
-                    spy.style.display = 'block';
-                    document.getElementById('spy-title').innerText = me.spyMission.title;
-                    document.getElementById('spy-desc').innerText = me.spyMission.desc;
-                    document.getElementById('spy-count').innerText = `${me.spyMission.current} / ${me.spyMission.total}`;
-                } else spy.style.display = 'none';
-            });
-            db.ref('users').on('value',s=>{allPlayers=s.val()||{}});
-
-            db.ref(`users/${myId}/personalAlert`).on('value', s => {
-                const data = s.val();
-                if(data) {
-                    playSound('warning');
-                    if(navigator.vibrate) navigator.vibrate(500); 
-                    document.getElementById('mobile-alert').style.display = 'flex';
-                    document.getElementById('m-alert-icon').innerText = data.icon || '💌';
-                    document.getElementById('m-alert-title').innerText = data.title;
-                    document.getElementById('m-alert-desc').innerHTML = data.desc;
-                    db.ref(`users/${myId}/personalAlert`).set(null); 
-                }
-            });
-        }
-
-        function rollDice(){ playSound('click'); db.ref(`users/${myId}/isWaitResult`).set(true); db.ref('game/event').push({type:'request_roll',playerId:myId}); }
-        function triggerSlot(){ playSound('click'); db.ref(`users/${myId}/reqSlot`).set(null); db.ref('game/slotTrigger').set(myId); }
-        function triggerRoulette(){ 
-            playSound('click');
-            const opponent = me.reqRoulette.opponent;
-            db.ref(`users/${myId}/reqRoulette`).set(null); 
-            db.ref('game/rouletteTrigger').set({p1:myId, p2:opponent}); 
-        }
-
-        function triggerRandomGame() {
-            playSound('click');
-            if(confirm("외부 랜덤 게임을 가져오시겠습니까?")) {
-                db.ref('game/event').push({type:'request_random_game', playerId:myId});
-                db.ref(`users/${myId}/isWaitResult`).set(true); 
+                bgMusic.play().catch(error => console.log("음악 재생 실패:", error));
             }
         }
 
-        function triggerSuddenDeath() {
-            playSound('warning');
-            if(confirm("정말 게임을 서든데스 모드로 전환하시겠습니까? (되돌릴 수 없습니다!)")) {
-                db.ref('game/status').update({ suddenDeath: true });
-                db.ref('game/event').push({type:'sudden_death_triggered', playerId:myId});
-            }
-        }
-
-        function progressSpy() {
-            if(!me.spyMission) return;
-            playSound('click');
-            const newCount = (me.spyMission.current || 0) + 1;
-            db.ref('game/spyProgress').set({ text: me.spyMission.title, total: me.spyMission.total, current: newCount });
-
-            if(newCount >= me.spyMission.total) {
-                if(confirm("미션 목표 달성! 성공을 선언하시겠습니까?\n(TV에 정체가 공개됩니다)")) {
-                    db.ref('game/spyClaim').set({spyId:myId, isFail:false});
-                    db.ref(`users/${myId}/spyMission`).set(null);
-                } else {
-                    db.ref(`users/${myId}/spyMission/current`).set(newCount);
-                }
+        function swapButtons() {
+            if (btnGroup.style.flexDirection === 'row-reverse') {
+                btnGroup.style.flexDirection = 'row';
             } else {
-                db.ref(`users/${myId}/spyMission/current`).set(newCount);
-                alert(`미션 수행 확인! (${newCount}/${me.spyMission.total})`);
+                btnGroup.style.flexDirection = 'row-reverse';
             }
+            document.activeElement.blur();
         }
 
-        function sendRule() {
-            const rule = document.getElementById('rule-input').value;
-            if(!rule) return alert("내용을 입력하세요");
-            playSound('success');
-            db.ref('game/newRule').set(rule);
-            db.ref(`users/${myId}/reqRule`).set(null);
-            document.getElementById('rule-modal').style.display = 'none';
+        function sayYes() {
+            resultScreen.classList.add('show');
         }
-
-        function openInventory(){
-            playSound('click');
-            const list=document.getElementById('inventory-list'); list.innerHTML="";
-            (me.inventory||[]).forEach((item,i)=>{
-                const b=document.createElement('div'); b.className='item-btn';
-                b.innerHTML=`${item.name} <span style="color:#aaa;float:right;">사용</span>`;
-                b.onclick=()=>prepareItem(i,item); list.appendChild(b);
-            });
-            document.getElementById('inventory-modal').style.display='flex';
-        }
-
-        function prepareItem(i, item){
-            // [NEW] 아이템 터치 시 설명 팝업 및 사용 확인 기능 추가
-            if(!confirm(`[ ${item.name} ]\n\n${item.desc}\n\n이 아이템을 사용하시겠습니까?`)) return;
-
-            selectedItemIndex=i; selectedItemName=item.name;
-            const needsTarget = ["지목", "반사", "흑기사", "대리", "저격", "물귀신", "소환", "신고", "돌리기", "러브샷"];
-            if(needsTarget.some(k=>item.name.includes(k))) {
-                // [NEW] 아이템 지목 시에도 TV 오버레이 띄우기
-                db.ref('game/targeting').set({playerId: myId, item: item.name});
-
-                document.getElementById('inventory-modal').style.display='none';
-                const list=document.getElementById('target-buttons'); list.innerHTML="";
-                Object.keys(allPlayers).forEach(k=>{
-                    if(k===myId)return;
-                    const b=document.createElement('button'); b.className='target-btn'; b.innerText=allPlayers[k].name;
-                    b.onclick=()=>{ if(confirm(allPlayers[k].name+"님에게 사용?")) sendItem(k); };
-                    list.appendChild(b);
-                });
-                document.getElementById('target-modal').style.display='flex';
-            } else {
-                // 이미 위에서 confirm 했으므로 바로 전송
-                sendItem(null);
-            }
-        }
-
-        function sendItem(tid){
-            playSound('success');
-            // [NEW] 사용 완료 시 TV 오버레이 끄기
-            db.ref('game/targeting').set(null);
-
-            db.ref('game/event').push({type:'item_use', playerId:myId, itemName:selectedItemName, targetId:tid});
-            const nextInv = me.inventory.filter((_,i)=>i!==selectedItemIndex);
-            db.ref(`users/${myId}/inventory`).set(nextInv);
-            closeModal('inventory-modal'); closeModal('target-modal');
-        }
-
-        // [NEW] 칸 도착 지목 전송 함수
-        function sendTargetCell(tid) {
-            playSound('success');
-            db.ref('game/event').push({
-                type: 'cell_target', 
-                playerId: myId, 
-                targetId: tid, 
-                cellName: me.reqTarget
-            });
-            
-            db.ref(`users/${myId}/reqTarget`).set(null); 
-            db.ref('game/targeting').set(null); 
-            closeModal('target-modal');
-        }
-
-        function closeModal(id){ 
-            // [NEW] 창 닫으면 TV 알림도 끄기
-            if(id === 'target-modal') db.ref('game/targeting').set(null);
-            document.getElementById(id).style.display='none'; 
-        }
-        function closeMobileAlert() { playSound('click'); document.getElementById('mobile-alert').style.display = 'none'; }
     </script>
 </body>
 </html>
