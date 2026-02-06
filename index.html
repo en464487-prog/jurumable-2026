@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>For My Love</title>
-    <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
+    <title>Invitation for You</title>
+    <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Noto+Serif+KR:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
-        /* ... (기본 스타일은 동일) ... */
         :root {
-            --main-bg: #f9f9f9;
-            --text-color: #5a4a42;
-            --point-color: #d4af37;
-            --pink-accent: #e8b4b8;
+            /* 밝고 화사한 컬러 팔레트 */
+            --bg-color: #fffbf7; /* 아주 연한 크림색 배경 */
+            --envelope-color: #f4e7d3; /* 고급스러운 베이지 봉투 */
+            --flap-color: #f9f0e6; /* 덮개는 살짝 더 밝게 */
+            --paper-color: #ffffff; /* 편지지는 깨끗한 흰색 */
+            --gold-accent: #d4af37; /* 우아한 금색 */
+            --wax-color: #d65c5c; /* 로맨틱한 레드 핑크 왁스 */
+            --text-color: #5a4a42; /* 부드러운 갈색 텍스트 */
+            --shadow-soft: rgba(0, 0, 0, 0.08); /* 부드러운 그림자 */
         }
 
         body {
@@ -21,7 +25,13 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: var(--main-bg);
+            background-color: var(--bg-color);
+            /* 은은한 종이 질감 패턴 (CSS로 구현) */
+            background-image: 
+                radial-gradient(#e6e6e6 1px, transparent 1px),
+                radial-gradient(#e6e6e6 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
             font-family: 'Noto Serif KR', serif;
             overflow: hidden;
             color: var(--text-color);
@@ -35,202 +45,257 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
+            perspective: 1000px;
         }
 
-        /* --- 이미지 래퍼 수정 (겹치기 위해) --- */
-        .image-wrapper {
+        /* --- 봉투 디자인 --- */
+        .envelope-wrapper {
             position: relative;
-            width: 100%;
-            max-width: 500px;
-            aspect-ratio: 4 / 3;
+            width: 320px;
+            height: 220px;
             cursor: pointer;
-            /* 중요: 이미지를 겹치기 위해 relative 설정 */
+            transition: transform 0.5s ease;
         }
 
-        .letter-image {
-            position: absolute; /* 이미지를 서로 겹치게 함 */
-            top: 0;
+        .envelope-wrapper:hover {
+            transform: translateY(-5px);
+        }
+
+        .envelope {
+            position: absolute;
+            bottom: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            border-radius: 10px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            
-            /* 핵심: 전환 애니메이션 설정 (1.5초 동안 서서히 변함) */
-            transition: opacity 1.5s ease-in-out, transform 1.5s ease;
-        }
-
-        /* 닫힌 편지 (위) */
-        #closedImg {
-            z-index: 2;
-            opacity: 1;
-            transform: scale(1);
-        }
-        
-        /* 열린 편지 (아래) */
-        #openedImg {
+            background: var(--envelope-color);
+            border-radius: 5px;
+            box-shadow: 0 20px 40px var(--shadow-soft);
             z-index: 1;
-            opacity: 0; /* 처음엔 안 보임 */
-            transform: scale(0.95); /* 약간 작게 시작 */
         }
 
-        /* --- 클릭 시 변화 (애니메이션) --- */
-        .image-wrapper.open #closedImg {
-            opacity: 0; /* 서서히 사라짐 */
-            transform: scale(1.05); /* 약간 커지면서 사라짐 (몽환적 효과) */
+        /* 봉투 앞주머니 */
+        .pocket {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 0; height: 0;
+            border-width: 0 160px 120px 160px;
+            border-style: solid;
+            border-color: transparent transparent #e8dbc9 transparent; /* 봉투보다 살짝 어둡게 */
+            z-index: 3;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+
+        /* 봉투 덮개 */
+        .flap {
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 0;
+            border-width: 130px 160px 0 160px;
+            border-style: solid;
+            border-color: var(--flap-color) transparent transparent transparent;
+            z-index: 4;
+            transform-origin: top;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s, z-index 0.2s 0.4s;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.05));
+        }
+
+        /* 덮개 금박 라인 */
+        .flap::after {
+            content: '';
+            position: absolute;
+            top: -120px; left: -150px;
+            width: 300px; height: 110px;
+            border-top: 2px solid var(--gold-accent);
+            opacity: 0.6;
             pointer-events: none;
         }
+
+        /* 왁스 실링 */
+        .wax-seal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 42px; height: 42px;
+            background: radial-gradient(circle at 30% 30%, #ff8f8f, var(--wax-color));
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            z-index: 5;
+            display: flex; justify-content: center; align-items: center;
+            color: #fff;
+            font-size: 20px;
+            transition: opacity 0.4s ease;
+        }
+        .wax-seal::before { content: '♥'; text-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+
+        /* --- 편지 속지 --- */
+        .letter {
+            position: absolute;
+            bottom: 5px; left: 50%;
+            transform: translateX(-50%);
+            width: 90%; height: 95%;
+            background: var(--paper-color);
+            z-index: 2;
+            border-radius: 3px;
+            transition: bottom 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.5s, z-index 0.1s 0.8s, transform 0.8s ease 0.5s;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 25px 20px; box-sizing: border-box; text-align: center;
+            border: 1px solid #f0f0f0;
+        }
+
+        /* 편지 금박 테두리 */
+        .letter::after {
+            content: '';
+            position: absolute;
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            border: 1px solid var(--gold-accent);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* --- 애니메이션 --- */
+        .container.open .flap { transform: rotateX(180deg); z-index: 1; }
+        .container.open .wax-seal { opacity: 0; }
+        .container.open .letter {
+            bottom: 140px;
+            z-index: 10;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            transform: translateX(-50%) scale(1.02);
+        }
+        .container.open .envelope-wrapper { transform: translateY(100px); cursor: default; }
         
-        .image-wrapper.open #openedImg {
-            opacity: 1; /* 서서히 나타남 */
-            transform: scale(1); /* 원래 크기로 돌아옴 */
-            z-index: 3;
+        /* 내용 및 버튼 */
+        .content {
+            opacity: 0; width: 100%;
+            transition: opacity 1s ease 1.2s;
         }
-
-
-        /* --- 질문 및 버튼 영역 (동일) --- */
-        .question-content {
-            text-align: center;
-            margin-top: 40px;
-            display: none; 
-            width: 90%;
-            max-width: 400px;
-        }
-
-        .container.show-content .question-content {
-            display: block;
-            /* 이미지가 변하는 시간(1.5s) 뒤에 텍스트 등장 */
-            animation: fadeUp 1s ease 1.0s forwards;
-        }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .container.open .content { opacity: 1; }
 
         h2 {
             font-family: 'Parisienne', cursive;
-            font-size: 3rem;
-            color: var(--point-color);
-            margin: 0 0 15px 0;
+            font-size: 2.2rem;
+            color: var(--gold-accent);
+            margin: 5px 0 15px 0;
         }
-        
-        p.sub-title {
-            font-size: 1.15rem;
-            line-height: 1.6;
-            margin-bottom: 40px;
-        }
-        
-        .highlight { color: var(--pink-accent); font-weight: bold; }
 
-        .btn-group {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            width: 100%;
+        .sub-text {
+            font-size: 0.8rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            display: block;
         }
+
+        .message {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--text-color);
+            margin-bottom: 30px;
+            word-break: keep-all;
+            font-weight: 500;
+        }
+        .highlight { color: #e07a7a; font-weight: bold; }
+
+        /* 버튼 스타일 */
+        .btn-group { display: flex; justify-content: center; gap: 12px; width: 100%; }
 
         button {
-            padding: 12px 40px;
-            border: 2px solid var(--point-color);
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-family: 'Noto Serif KR', serif;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            padding: 10px 30px;
+            border: 1px solid var(--gold-accent);
+            border-radius: 50px; /* 둥근 버튼 */
             background: #fff;
-            color: var(--point-color);
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .yes-btn { background: var(--point-color); color: white; }
-        .no-btn { background: #fff; color: #aaa; border-color: #ddd; }
-
-        /* 클릭 가이드 */
-        .click-guide {
-            position: absolute;
-            bottom: 5%;
-            left: 50%;
-            transform: translateX(-50%);
+            color: var(--text-color);
+            font-family: 'Noto Serif KR', serif;
             font-size: 0.95rem;
-            color: var(--pink-accent);
             font-weight: bold;
-            animation: pulse 2s infinite;
-            pointer-events: none;
-            transition: opacity 0.5s;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .container.show-content .click-guide { opacity: 0; }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+
+        .yes-btn {
+            background: var(--gold-accent);
+            color: #fff;
+            border: 1px solid var(--gold-accent);
         }
-        
+        .yes-btn:hover { background: #b08d4b; transform: translateY(-2px); }
+        .no-btn:hover { background: #fafafa; }
+
         /* 결과 화면 */
         #resultScreen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.8s ease; z-index: 100;
         }
         #resultScreen.show { opacity: 1; pointer-events: all; }
-        #resultScreen h1 { font-family: 'Parisienne', cursive; font-size: 4rem; color: var(--pink-accent); margin-bottom: 20px; }
-        #resultScreen p { font-size: 1.5rem; font-weight: bold; }
+        #resultScreen h1 {
+            font-family: 'Parisienne', cursive;
+            font-size: 3.5rem;
+            color: var(--gold-accent);
+            margin-bottom: 20px;
+        }
+        #resultScreen p { color: var(--text-color); font-size: 1.3rem; font-weight: bold; }
 
+        /* 가이드 텍스트 */
+        .guide {
+            position: absolute; bottom: -40px; width: 100%; text-align: center;
+            color: #aaa; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase;
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        .container.open .guide { display: none; }
     </style>
 </head>
 <body>
     <audio id="bgMusic" src="bgm.mp3" loop preload="auto"></audio>
 
     <div class="container" id="mainContainer">
-        <div class="image-wrapper" id="letterWrapper" onclick="openLetter()">
-            <img id="closedImg" class="letter-image" src="closed.png" alt="닫힌 편지">
-            <img id="openedImg" class="letter-image" src="open.png" alt="열린 편지">
-        </div>
-        <div class="click-guide" id="guide">Touch to Open</div>
+        <div class="envelope-wrapper" onclick="openLetter()">
+            <div class="envelope">
+                <div class="pocket"></div>
+                <div class="flap"></div>
+                <div class="wax-seal"></div>
+                <div class="guide">Touch to Open</div>
+                
+                <div class="letter">
+                    <div class="content">
+                        <span class="sub-text">February 14, 2026</span>
+                        <h2>Be My Valentine</h2>
+                        
+                        <p class="message">
+                            사랑하는 자기야,<br>
+                            이번 발렌타인데이도<br>
+                            <span class="highlight">나와 함께 해줄래?</span>
+                        </p>
 
-        <div class="question-content">
-            <h2>Be My Valentine</h2>
-            <p class="sub-title">
-                사랑하는 자기야,<br>
-                이번 발렌타인데이도 <span class="highlight">우리 함께</span> 할까?
-            </p>
-            <div class="btn-group" id="btnGroup">
-                <button class="yes-btn" onclick="sayYes()">YES!</button>
-                <button class="no-btn" onclick="swapButtons()">NO..</button>
+                        <div class="btn-group" id="btnGroup">
+                            <button class="yes-btn" onclick="sayYes()">YES!</button>
+                            <button class="no-btn" onclick="swapButtons()">NO..</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <div id="resultScreen">
         <h1>Thank You!</h1>
         <p>💖 행복한 하루 보내자 💖</p>
     </div>
 
     <script>
-        const mainContainer = document.getElementById('mainContainer');
-        const letterWrapper = document.getElementById('letterWrapper');
+        const container = document.getElementById('mainContainer');
         const btnGroup = document.getElementById('btnGroup');
         const bgMusic = document.getElementById('bgMusic');
         const resultScreen = document.getElementById('resultScreen');
 
         function openLetter() {
-            if (!letterWrapper.classList.contains('open')) {
-                letterWrapper.classList.add('open');
-                mainContainer.classList.add('show-content');
-                
-                bgMusic.play().catch(error => console.log("음악 재생 실패:", error));
+            if (!container.classList.contains('open')) {
+                container.classList.add('open');
+                bgMusic.play().catch(e => console.log("자동재생 차단됨"));
             }
         }
 
@@ -244,6 +309,7 @@
         }
 
         function sayYes() {
+            event.stopPropagation();
             resultScreen.classList.add('show');
         }
     </script>
